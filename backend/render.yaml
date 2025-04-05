@@ -10,7 +10,7 @@ services:
       - key: CORS_ORIGINS
         value: https://rent-spiracy.vercel.app,https://rentspiracy.tech,https://www.rentspiracy.tech,http://localhost:3000
     healthCheckPath: /health
-    repo: https://github.com/tash-tech/Rent-Spiracy
+    repo: https://github.com/tashrique/Rent-Spiracy
     branch: main
     rootDir: backend
     buildFilter:
