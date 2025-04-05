@@ -1,10 +1,14 @@
 from fastapi import HTTPException, Request
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Callable
 from datetime import datetime, timedelta
 import time
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import Response
+from starlette.types import ASGIApp
 
-class RateLimiter:
-    def __init__(self, requests_per_minute: int = 60):
+class RateLimiter(BaseHTTPMiddleware):
+    def __init__(self, app: ASGIApp, requests_per_minute: int = 60):
+        super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.requests: Dict[str, list] = {}
     
@@ -17,7 +21,7 @@ class RateLimiter:
                 if current_time - req_time < 60
             ]
     
-    async def __call__(self, request: Request):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         ip = request.client.host
         current_time = time.time()
         
@@ -30,13 +34,14 @@ class RateLimiter:
         
         # Check rate limit
         if len(self.requests[ip]) >= self.requests_per_minute:
-            raise HTTPException(
-                status_code=429,
-                detail="Too many requests. Please try again later."
+            return Response(
+                content="Too many requests. Please try again later.",
+                status_code=429
             )
         
         # Add current request
         self.requests[ip].append(current_time)
         
         # Continue processing the request
-        return None 
+        response = await call_next(request)
+        return response

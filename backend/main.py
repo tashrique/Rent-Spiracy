@@ -1,13 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import logging
 from dotenv import load_dotenv
 from app.middleware.rate_limiter import RateLimiter
+from app.database import client, db
+from fastapi import Request
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Set to DEBUG for more detailed logs
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("rent-spiracy-api")
@@ -37,7 +39,7 @@ app.add_middleware(
 )
 
 # Add rate limiting middleware
-app.middleware("http")(RateLimiter(requests_per_minute=60))
+app.add_middleware(RateLimiter)
 
 # Import routers if they exist
 try:
@@ -51,15 +53,30 @@ except ImportError as e:
     # If router modules don't exist yet, create basic endpoints
     pass
 
-
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Rent-Spiracy API"}
 
-
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    try:
+        logger.debug("Attempting to connect to MongoDB...")
+        
+        # Try a simple database operation
+        await db.command("ping")
+        logger.debug("Successfully pinged database")
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "database_name": db.name
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={"status": "unhealthy", "error": str(e)}
+        )
 
 if __name__ == "__main__":
     import uvicorn
