@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LanguageSelector from "../components/LanguageSelector";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ScamDetectionForm from "../components/ScamDetectionForm";
 import ScamDetectionResults from "../components/ScamDetectionResults";
-import confetti from "canvas-confetti";
+import { ScamDetectionResponse } from "../services/api";
+import apiService from "../services/api";
 
-type Language = "english" | "chinese" | "hindi" | "spanish";
+type Language =
+  | "english"
+  | "chinese"
+  | "hindi"
+  | "spanish"
+  | "korean"
+  | "bengali";
 type Step = "language" | "form" | "results";
 
 // Fun quotes about scams in different languages
@@ -36,11 +43,23 @@ const funQuotes = {
     "याद रखें: आपके मकान मालिक को आपके रिसते नल को ठीक करना चाहिए, न कि आपके लॉटरी टिकट।",
     "एक अच्छी डील के लिए आपके सोशल सिक्योरिटी नंबर और आपके पसंदीदा बचपन के पालतू जानवर के नाम की आवश्यकता नहीं होनी चाहिए।",
   ],
+  korean: [
+    "너무 좋아서 사실이라고 믿기 어렵다면, 아마도 숨겨진 카메라와 TV 진행자가 있을 겁니다.",
+    "사기꾼은 서투른 마술사와 같습니다 - 일단 트릭을 알면 쇼가 그렇게 인상적이지 않습니다.",
+    "기억하세요: 집주인은 당신의 물이 새는 수도꼭지를 고쳐야 하지, 당신의 복권을 고치는 것이 아닙니다.",
+    "좋은 거래는 당신의 사회보장번호와 어린 시절 좋아하던 애완동물의 이름을 요구해서는 안 됩니다.",
+  ],
+  bengali: [
+    "যদি এটি সত্যিই খুব ভালো শোনায়, তাহলে সম্ভবত এতে লুকানো ক্যামেরা এবং একজন টিভি হোস্ট আছে।",
+    "প্রতারকরা খারাপ জাদুকরদের মতো - একবার আপনি কৌশলটি জেনে গেলে, শোটি তেমন প্রভাবশালী নয়।",
+    "মনে রাখবেন: আপনার বাড়িওয়ালা আপনার ফুটো কলের মেরামত করবে, আপনার লটারি টিকিট নয়।",
+    "একটি ভালো চুক্তিতে আপনার সোশ্যাল সিকিউরিটি নম্বর এবং আপনার ছোটবেলার প্রিয় পোষা প্রাণীর নাম উভয়ই চাওয়া উচিত নয়।",
+  ],
 };
 
-// Mock results for demo purposes
-const mockResults = {
-  scam_likelihood: "Medium" as const,
+// Default mock results in case the API is not available
+const defaultMockResults: ScamDetectionResponse = {
+  scam_likelihood: "Medium",
   explanation:
     "This listing has some concerning elements. The price is significantly below market average for the area and the landlord is requesting an unusually large deposit via wire transfer.",
   simplified_clauses: [
@@ -75,22 +94,40 @@ const mockResults = {
   ],
 };
 
-// Fun animation function
-const triggerFunAnimation = () => {
-  if (typeof window !== "undefined") {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
-  }
-};
-
 export default function Home() {
   const [language, setLanguage] = useState<Language | null>(null);
   const [currentStep, setCurrentStep] = useState<Step>("language");
   const [randomQuote, setRandomQuote] = useState("");
-  const results = mockResults;
+  const [results, setResults] =
+    useState<ScamDetectionResponse>(defaultMockResults);
+  const [apiStatus, setApiStatus] = useState<{
+    isConnected: boolean;
+    message: string;
+  }>({
+    isConnected: false,
+    message: "Checking API connection...",
+  });
+
+  // Check API connection on load
+  useEffect(() => {
+    const checkApiConnection = async () => {
+      try {
+        const status = await apiService.scamDetection.checkStatus();
+        setApiStatus({
+          isConnected: true,
+          message: status.message,
+        });
+      } catch (error) {
+        console.error("API connection error:", error);
+        setApiStatus({
+          isConnected: false,
+          message: "Using demo mode - API not available",
+        });
+      }
+    };
+
+    checkApiConnection();
+  }, []);
 
   // Update random quote when language changes
   const updateRandomQuote = (lang: Language) => {
@@ -103,14 +140,16 @@ export default function Home() {
     setLanguage(selectedLanguage);
     updateRandomQuote(selectedLanguage);
     setCurrentStep("form");
-
-    // Trigger fun animation
-    triggerFunAnimation();
   };
 
   const handleLanguageChange = (newLanguage: Language) => {
     setLanguage(newLanguage);
     updateRandomQuote(newLanguage);
+  };
+
+  const handleFormSubmit = (apiResults: ScamDetectionResponse) => {
+    setResults(apiResults);
+    setCurrentStep("results");
   };
 
   const handleBackToForm = () => {
@@ -126,13 +165,7 @@ export default function Home() {
         if (!language) return <div>Language not selected</div>;
 
         return (
-          <ScamDetectionForm
-            language={language}
-            onSubmit={() => {
-              setCurrentStep("results");
-              triggerFunAnimation(); // Fun animation when showing results
-            }}
-          />
+          <ScamDetectionForm language={language} onSubmit={handleFormSubmit} />
         );
       case "results":
         if (!language) return <div>Language not selected</div>;
@@ -158,13 +191,25 @@ export default function Home() {
         <div className="absolute bottom-1/3 -left-10 w-40 h-40 rounded-full bg-pink-500/10 blur-3xl"></div>
       </div>
 
-      {/* Header with Language Switcher */}
+      {/* Header with Language Switcher and API Status */}
       {language && currentStep !== "language" && (
         <header className="sticky top-0 z-40 backdrop-blur-md bg-gray-900/80 border-b border-gray-800">
           <div className="container mx-auto px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="text-2xl">🛡️</span>
               <h1 className="font-bold text-xl">Rent-Spiracy</h1>
+
+              {/* API Status Indicator */}
+              <div className="ml-3 hidden md:flex items-center gap-1">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    apiStatus.isConnected ? "bg-green-500" : "bg-yellow-500"
+                  }`}
+                ></span>
+                <span className="text-xs text-gray-400">
+                  {apiStatus.message}
+                </span>
+              </div>
             </div>
             <LanguageSwitcher
               currentLanguage={language}
@@ -182,6 +227,20 @@ export default function Home() {
         <div className="w-full px-4 py-3 text-center">
           <div className="max-w-3xl mx-auto bg-gray-800/50 p-4 rounded-xl border border-gray-700 italic text-sm text-gray-300">
             &ldquo;{randomQuote}&rdquo;
+          </div>
+        </div>
+      )}
+
+      {/* API Status Footer (mobile) */}
+      {apiStatus && language && currentStep !== "language" && (
+        <div className="md:hidden w-full px-4 py-2 text-center">
+          <div className="flex items-center justify-center gap-1 text-xs text-gray-400">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                apiStatus.isConnected ? "bg-green-500" : "bg-yellow-500"
+              }`}
+            ></span>
+            <span>{apiStatus.message}</span>
           </div>
         </div>
       )}

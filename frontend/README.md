@@ -16,8 +16,8 @@ This is the Next.js frontend for the Rent-Spiracy application, providing a multi
    ```
 
 3. **Run the development server**:
-   ```bash
-   npm run dev
+```bash
+npm run dev
    ```
 
 The site will be available at http://localhost:3000
