@@ -124,18 +124,28 @@ export default function ScamDetectionForm({
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-8">
       <div className="text-center mb-8">
+        <div className="inline-block relative mb-2">
+          <span className="text-4xl animate-float inline-block">🕵️</span>
+          <span className="absolute top-0 right-0 text-2xl animate-pulse-slow">
+            🔍
+          </span>
+        </div>
         <h1 className="text-3xl font-bold mb-2 text-white">{t.title}</h1>
         <p className="text-gray-300">{t.subtitle}</p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 bg-gray-800 p-6 rounded-lg shadow-md"
+        className="space-y-6 bg-gray-800 p-6 rounded-lg shadow-md backdrop-blur-sm border border-gray-700 relative overflow-hidden"
       >
+        {/* Fun decoration elements */}
+        <div className="absolute -top-6 -right-6 w-12 h-12 rounded-full bg-blue-500/20 blur-xl animate-float"></div>
+        <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-pink-500/20 blur-xl animate-pulse-slow"></div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
+          <div className="group">
             <label
-              className="block text-sm font-semibold mb-1 text-gray-200"
+              className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
               htmlFor="email"
             >
               {t.emailLabel}
@@ -143,15 +153,15 @@ export default function ScamDetectionForm({
             <input
               id="email"
               type="email"
-              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white"
+              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
-          <div>
+          <div className="group">
             <label
-              className="block text-sm font-semibold mb-1 text-gray-200"
+              className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
               htmlFor="phone"
             >
               {t.phoneLabel}
@@ -159,57 +169,74 @@ export default function ScamDetectionForm({
             <input
               id="phone"
               type="tel"
-              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white"
+              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
           </div>
         </div>
 
-        <div>
+        <div className="group">
           <label
-            className="block text-sm font-semibold mb-1 text-gray-200"
+            className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
             htmlFor="listingUrl"
           >
             {t.urlLabel}
           </label>
-          <input
-            id="listingUrl"
-            type="url"
-            className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white"
-            value={listingUrl}
-            onChange={(e) => setListingUrl(e.target.value)}
-            placeholder="https://"
-          />
+          <div className="relative">
+            <input
+              id="listingUrl"
+              type="url"
+              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+              value={listingUrl}
+              onChange={(e) => setListingUrl(e.target.value)}
+              placeholder="https://"
+            />
+            {listingUrl && (
+              <span className="absolute right-3 top-2 text-lg animate-bounceIn">
+                🔗
+              </span>
+            )}
+          </div>
         </div>
 
-        <div>
+        <div className="group">
           <label
-            className="block text-sm font-semibold mb-1 text-gray-200"
+            className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
             htmlFor="address"
           >
             {t.addressLabel}
           </label>
-          <input
-            id="address"
-            type="text"
-            className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              id="address"
+              type="text"
+              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+            {address && (
+              <span className="absolute right-3 top-2 text-lg animate-bounceIn">
+                📍
+              </span>
+            )}
+          </div>
         </div>
 
-        <div>
+        <div className="group">
           <label
-            className="block text-sm font-semibold mb-1 text-gray-200"
+            className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
             htmlFor="fileUpload"
           >
-            {t.fileLabel}
+            <div className="flex items-center gap-1">
+              {t.fileLabel}
+              <span className="text-lg animate-float inline-block">📄</span>
+            </div>
           </label>
           <input
             id="fileUpload"
             type="file"
-            className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white file:text-white file:bg-blue-700 file:border-0 file:rounded file:px-3 file:py-1 file:mr-2"
+            className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white file:text-white file:bg-blue-700 file:border-0 file:rounded file:px-3 file:py-1 file:mr-2 file:hover:bg-blue-600 transition-all"
             accept=".pdf,.doc,.docx"
             onChange={handleFileChange}
           />
@@ -221,9 +248,12 @@ export default function ScamDetectionForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded disabled:opacity-50"
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-4 rounded-lg disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] group relative overflow-hidden"
         >
-          {isSubmitting ? <span>Loading...</span> : t.submitButton}
+          <span className="relative z-10">
+            {isSubmitting ? <span>Loading...</span> : t.submitButton}
+          </span>
+          <span className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-500 group-hover:from-blue-500 group-hover:to-blue-400 transition-colors duration-200"></span>
         </button>
       </form>
     </div>
