@@ -7,5 +7,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT:-8000}"]
+# Run the application using shell form to allow variable substitution
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
