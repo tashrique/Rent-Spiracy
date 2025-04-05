@@ -5,6 +5,8 @@ from app.services.analysis_service import AnalysisService
 from app.utils.pdf_parser import extract_text_from_pdf
 import io
 import os
+import pytesseract
+from PIL import Image
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
@@ -26,7 +28,7 @@ async def upload_document(
     """
     Upload a lease document for analysis.
 
-    - file: Lease document file
+    - file: Lease document file (PDF, text, or image)
     - listing_url: Optional URL of the rental listing
     - property_address: Optional physical address
     - language: Preferred language for results
@@ -46,10 +48,32 @@ async def upload_document(
         # Extract text based on file type
         document_content = ""
         file_extension = os.path.splitext(file.filename)[1].lower()
+        content_type = file.content_type or ""
         
         if file_extension == '.pdf':
             # Parse PDF document
             document_content = extract_text_from_pdf(content)
+        elif content_type.startswith('image/'):
+            # Process image using OCR
+            try:
+                # Open the image using PIL
+                image = Image.open(io.BytesIO(content))
+                
+                # Perform OCR to extract text
+                document_content = pytesseract.image_to_string(image)
+                
+                # Check if we got meaningful text
+                if not document_content or len(document_content.strip()) < 50:
+                    # If we got very little text, the OCR might have failed
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Could not extract enough text from the image. Please upload a clearer image or try a different document format."
+                    )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Error processing image: {str(e)}"
+                )
         else:
             # For other file types, treat as text
             try:
@@ -57,7 +81,7 @@ async def upload_document(
             except UnicodeDecodeError:
                 raise HTTPException(
                     status_code=400,
-                    detail="Unsupported file format. Please upload a PDF or text document."
+                    detail="Unsupported file format. Please upload a PDF, image, or text document."
                 )
 
         # Check if we successfully extracted text

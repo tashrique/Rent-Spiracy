@@ -1,12 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { scamDetectionApi, ScamDetectionResponse } from "../services/api";
 import { translations } from "../services/constants";
 
 interface ScamDetectionFormProps {
   language: string;
   onSubmit: (results: ScamDetectionResponse) => void;
+}
+
+// Add type definition for translations
+interface TranslationType {
+  title: string;
+  subtitle: string;
+  urlLabel: string;
+  addressLabel: string;
+  fileLabel: string;
+  fileHelp: string;
+  photoLabel: string;
+  takePhotoLabel: string;
+  galleryLabel: string;
+  submitButton: string;
+  atLeastOneField: string;
+  submittingText: string;
+  errorText: string;
+  analysisStage1: string;
+  analysisStage2: string;
+  analysisStage3: string;
+  analysisStage4: string;
+  legalDisclaimer: string;
 }
 
 export default function ScamDetectionForm({
@@ -16,20 +38,40 @@ export default function ScamDetectionForm({
   const [listingUrl, setListingUrl] = useState("");
   const [address, setAddress] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analysisStage, setAnalysisStage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const t =
-    translations[language as keyof typeof translations] || translations.english;
+    (translations[language as keyof typeof translations] as TranslationType) ||
+    (translations.english as TranslationType);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setSelectedFile(file);
+
+      // Create preview URL for images
+      if (file.type.startsWith("image/")) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+      } else {
+        setPreviewUrl(null);
+      }
+
       // Reset progress when a new file is selected
       setUploadProgress(0);
       setAnalysisStage(null);
+    }
+  };
+
+  const handleCapturePhoto = () => {
+    if (photoInputRef.current) {
+      photoInputRef.current.click();
     }
   };
 
@@ -79,8 +121,11 @@ export default function ScamDetectionForm({
       if (selectedFile) {
         // For PDF files, we need to use the specialized endpoint
         const isPDF = selectedFile.name.toLowerCase().endsWith(".pdf");
+        const isImage = selectedFile.type.startsWith("image/");
         console.log(
-          `Uploading ${isPDF ? "PDF" : "text"} file: ${selectedFile.name}`
+          `Uploading ${isPDF ? "PDF" : isImage ? "image" : "text"} file: ${
+            selectedFile.name
+          }`
         );
 
         // Always use the uploadDocument method which handles both PDF and text files
@@ -112,39 +157,15 @@ export default function ScamDetectionForm({
     } catch (err) {
       console.error("Error submitting form:", err);
       setError(t.errorText);
-
-      // // Use mock data for demo if real API fails
-      // const mockResult: ScamDetectionResponse = {
-      //   id: "mock-id-" + Date.now(),
-      //   scam_likelihood: "Medium",
-      //   explanation:
-      //     "This is a mock analysis since the API request failed. " +
-      //     "We received: URL: " +
-      //     (listingUrl || "None") +
-      //     ", Address: " +
-      //     (address || "None") +
-      //     ", Document: " +
-      //     (selectedFile ? selectedFile.name : "None"),
-      //   simplified_clauses: [
-      //     {
-      //       text: "Example lease clause",
-      //       simplified_text: "This is a simplified explanation of the clause",
-      //       is_concerning: false,
-      //     },
-      //   ],
-      //   suggested_questions: [
-      //     "Is a security deposit required?",
-      //     "When is rent due each month?",
-      //     "Are pets allowed?",
-      //     "What utilities are included in the rent?",
-      //     "What is the policy for maintenance and repairs?",
-      //   ],
-      //   created_at: new Date().toISOString(),
-      // };
-
-      // onSubmit(mockResult);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Cleanup preview URL when component unmounts or when new file is selected
+  const cleanupPreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
     }
   };
 
@@ -233,6 +254,7 @@ export default function ScamDetectionForm({
             <input
               id="documentFile"
               type="file"
+              ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
               accept=".txt,.pdf,.doc,.docx"
@@ -243,8 +265,74 @@ export default function ScamDetectionForm({
               className="cursor-pointer w-full p-3 border-2 border-dashed border-gray-600 rounded bg-gray-700/50 text-gray-300 hover:border-blue-500 hover:text-blue-300 transition-all flex items-center justify-center"
             >
               <span className="mr-2 text-xl">📄</span>
-              {selectedFile ? selectedFile.name : t.fileHelp}
+              {selectedFile && !selectedFile.type.startsWith("image/")
+                ? selectedFile.name
+                : t.fileHelp}
             </label>
+          </div>
+        </div>
+
+        {/* Photo upload options */}
+        <div className="group">
+          <label className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors">
+            {t.photoLabel}
+          </label>
+          <div className="flex flex-col space-y-3">
+            {/* Hidden photo input */}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              ref={photoInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={isSubmitting}
+            />
+
+            {/* Photo upload buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={handleCapturePhoto}
+                className="p-3 border border-gray-600 rounded bg-gray-700 text-white hover:bg-gray-600 transition-all flex items-center justify-center"
+                disabled={isSubmitting}
+              >
+                <span className="mr-2">📷</span>
+                {t.takePhotoLabel}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="p-3 border border-gray-600 rounded bg-gray-700 text-white hover:bg-gray-600 transition-all flex items-center justify-center"
+                disabled={isSubmitting}
+              >
+                <span className="mr-2">🖼️</span>
+                {t.galleryLabel}
+              </button>
+            </div>
+
+            {/* Image preview */}
+            {previewUrl && (
+              <div className="mt-3 relative">
+                <img
+                  src={previewUrl}
+                  alt="Lease document preview"
+                  className="w-full rounded border border-gray-600 object-contain max-h-48"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    cleanupPreview();
+                    setPreviewUrl(null);
+                    setSelectedFile(null);
+                  }}
+                  className="absolute top-2 right-2 bg-gray-800/70 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-500/70"
+                >
+                  ✖
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

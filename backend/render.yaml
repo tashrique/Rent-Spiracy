@@ -8,11 +8,14 @@ services:
       - key: PORT
         value: 8000
       - key: CORS_ORIGINS
-        value: https://your-frontend-url.vercel.app,http://localhost:3000
+        value: https://rent-spiracy.vercel.app,https://rentspiracy.tech,https://www.rentspiracy.tech,http://localhost:3000
     healthCheckPath: /health
-    repo: https://github.com/yourusername/Rent-Spiracy
+    repo: https://github.com/tash-tech/Rent-Spiracy
     branch: main
     rootDir: backend
+    buildFilter:
+      paths:
+        - backend/**
     # Add other environment variables as needed
 
 # Update this file with your own GitHub repository information before deploying

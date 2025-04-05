@@ -24,10 +24,11 @@ The site will be available at http://localhost:3000
 
 ## Features
 
-- Multilingual support (English, Spanish, Chinese, Hindi)
+- Multilingual support (English, Spanish, Chinese, Hindi, Korean, Bengali)
 - Dark theme UI with accessible contrast
 - Scam detection form
 - Lease agreement analysis
+- Photo capture of lease documents with OCR processing
 - Responsive design
 
 ## Deployment to Vercel
