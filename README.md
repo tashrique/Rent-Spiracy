@@ -2,6 +2,10 @@
 
 AI-powered rental scam detection and lease understanding tool for people of color, especially immigrants, international students, and first-generation renters.
 
+Frontend deployment: https://rent-spiracy.vercel.app/
+
+Backend Deployment: https://rent-spiracy.onrender.com/
+
 ## 🚀 Deployment
 
 This project consists of two main components that can be deployed separately:
