@@ -1,24 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rent-Spiracy Frontend
 
-## Getting Started
+This is the Next.js frontend for the Rent-Spiracy application, providing a multilingual interface for rental scam detection.
 
-First, run the development server:
+## Development Setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Set up environment variables**:
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local file with your configuration
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The site will be available at http://localhost:3000
+
+## Features
+
+- Multilingual support (English, Spanish, Chinese, Hindi)
+- Dark theme UI with accessible contrast
+- Scam detection form
+- Lease agreement analysis
+- Responsive design
+
+## Deployment to Vercel
+
+### Automatic Deployment
+
+1. Push your code to a GitHub repository
+2. Import your project to Vercel
+3. Vercel will automatically detect the Next.js configuration
+4. Set the following environment variables:
+   - `NEXT_PUBLIC_API_URL`: URL of your backend API (e.g. https://rent-spiracy-api.onrender.com)
+5. Deploy
+
+### Using Vercel CLI
+
+1. Install Vercel CLI:
+   ```bash
+   npm install -g vercel
+   ```
+
+2. Login to Vercel:
+   ```bash
+   vercel login
+   ```
+
+3. Deploy:
+   ```bash
+   vercel
+   ```
+
+4. For production deployment:
+   ```bash
+   vercel --prod
+   ```
+
+## Environment Variables
+
+- `NEXT_PUBLIC_API_URL`: URL of the backend API
 
 ## Learn More
 

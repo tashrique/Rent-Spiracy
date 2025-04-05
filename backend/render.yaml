@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: rent-spiracy-api
+    runtime: docker
+    plan: free
+    repo: https://github.com/yourusername/Rent-Spiracy
+    region: oregon
+    branch: main
+    rootDir: backend
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        sync: false
+      # Add other environment variables as needed
+
+# Update this file with your own GitHub repository information before deploying

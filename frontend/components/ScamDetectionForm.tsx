@@ -46,7 +46,7 @@ export default function ScamDetectionForm({
 
     try {
       // In a real implementation, this would send the data to the backend
-      // const response = await fetch('http://localhost:8000/api/scam-detection/analyze', {
+      // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scam-detection/analyze`, {
       //   method: 'POST',
       //   body: formData,
       // });
