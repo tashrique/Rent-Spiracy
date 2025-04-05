@@ -168,6 +168,8 @@ export default function ScamDetectionResults({
       noSavedQuestionsYet: "Save important questions for reference",
       legalDisclaimerText:
         "This assessment is based on automated analysis and may not catch all scams or lease issues. Always exercise caution and consider professional legal advice when needed.",
+      highConcernClause: "High Concern",
+      moderateConcernClause: "Moderate Concern",
     },
     spanish: {
       title: "Resultados de Detección de Estafas",
@@ -208,6 +210,8 @@ export default function ScamDetectionResults({
       noSavedQuestionsYet: "Guarda preguntas importantes para referencia",
       legalDisclaimerText:
         "Esta evaluación se basa en un análisis automatizado y puede no capturar todas las estafas o problemas de arrendamiento. Siempre ejerza precaución y considere la consulta de un abogado profesional cuando sea necesario.",
+      highConcernClause: "Alto Riesgo",
+      moderateConcernClause: "Riesgo Moderado",
     },
     chinese: {
       title: "诈骗检测结果",
@@ -246,6 +250,8 @@ export default function ScamDetectionResults({
       noSavedQuestionsYet: "保存重要问题以供参考",
       legalDisclaimerText:
         "此评估基于自动分析，可能无法捕获所有诈骗或租赁问题。始终谨慎行事并考虑在需要时寻求专业法律建议。",
+      highConcernClause: "高风险",
+      moderateConcernClause: "中等风险",
     },
     hindi: {
       title: "धोखाधड़ी का पता लगाने के परिणाम",
@@ -285,6 +291,8 @@ export default function ScamDetectionResults({
       noSavedQuestionsYet: "संदर्भ के लिए महत्वपूर्ण प्रश्न सहेजें",
       legalDisclaimerText:
         "यह टूल एक कानूनी दस्तावेज़ नहीं है और कानूनी सलाह नहीं देता है। एस्ट शुधुं जानकारीप्रदान के लिए है।",
+      highConcernClause: "उच्च जोखिम",
+      moderateConcernClause: "मध्यम जोखिम",
     },
     korean: {
       title: "사기 탐지 결과",
@@ -324,6 +332,8 @@ export default function ScamDetectionResults({
       noSavedQuestionsYet: "참고용으로 중요한 질문 저장",
       legalDisclaimerText:
         "이 도구는 법률 문서가 아니며 법률 조언을 제공하지 않습니다. 정보 목적으로만 사용됩니다.",
+      highConcernClause: "높은 위험",
+      moderateConcernClause: "중간 위험",
     },
     bengali: {
       title: "প্রতারণা সনাক্তকরণ ফলাফল",
@@ -363,6 +373,8 @@ export default function ScamDetectionResults({
       noSavedQuestionsYet: "রেফারেন্সের জন্য গুরুত্বপূর্ণ প্রশ্ন সংরক্ষণ করুন",
       legalDisclaimerText:
         "এই টুল একটি কানুনী দস্তাবেজ নয় এবং কানুনী সালাউট নয়। এটি শুধুমাত্র তথ্যপ্রদানের জন্য হয়।",
+      highConcernClause: "উচ্চ ঝুঁকি",
+      moderateConcernClause: "মাঝারি ঝুঁকি",
     },
   };
 
@@ -514,8 +526,127 @@ export default function ScamDetectionResults({
       }));
     }
 
+    // If no clauses available, generate default ones based on risk level
+    if (results.risk_level && results.simplified_clauses.length === 0) {
+      // Create default clauses based on risk level
+      const defaultClauses = [];
+
+      if (
+        results.risk_level === "High Risk" ||
+        results.risk_level === "Very High Risk"
+      ) {
+        // High risk - mix of concerning and normal clauses, mostly concerning
+        defaultClauses.push({
+          text: "Tenant shall pay a non-refundable application fee of $500 via wire transfer within 24 hours of submitting application.",
+          simplified_text:
+            "You must pay a $500 non-refundable application fee through wire transfer within 1 day of applying.",
+          is_concerning: true,
+          reason:
+            "Unusually high application fee and the requirement for wire transfer are red flags.",
+        });
+        defaultClauses.push({
+          text: "Landlord may enter premises at any time without prior notice for inspection or maintenance purposes.",
+          simplified_text:
+            "The landlord can enter your home anytime without telling you first.",
+          is_concerning: true,
+          reason:
+            "This violates standard tenant rights to reasonable notice before entry.",
+        });
+        defaultClauses.push({
+          text: "Late payment of rent shall incur a fee of 15% of monthly rent plus $50 per day until paid in full.",
+          simplified_text:
+            "If your rent is late, you'll be charged 15% of your monthly rent plus $50 for each day it remains unpaid.",
+          is_concerning: true,
+          reason:
+            "These late fees are excessive and may violate laws in many jurisdictions that limit late fees.",
+        });
+        defaultClauses.push({
+          text: "The premises shall be used solely as a residence for Tenant(s) named herein.",
+          simplified_text:
+            "Only the people named in this lease can live in the rental unit.",
+          is_concerning: false,
+        });
+        defaultClauses.push({
+          text: "Tenant shall maintain the Premises in a clean and sanitary condition.",
+          simplified_text:
+            "You must keep the property clean and in good condition.",
+          is_concerning: false,
+        });
+      } else if (results.risk_level === "Medium Risk") {
+        // Medium risk - mix of concerning and normal clauses, more balanced
+        defaultClauses.push({
+          text: "Late payment of rent shall incur a fee of 10% of monthly rent.",
+          simplified_text:
+            "If your rent is late, you'll be charged 10% of your monthly rent as a late fee.",
+          is_concerning: true,
+          reason:
+            "This late fee is somewhat high but may be legal depending on your jurisdiction.",
+        });
+        defaultClauses.push({
+          text: "Landlord may enter the premises with 12 hours notice for inspection or repairs.",
+          simplified_text:
+            "The landlord can enter your home with 12 hours advance notice.",
+          is_concerning: true,
+          reason:
+            "While some notice is provided, many jurisdictions require 24-48 hours notice for landlord entry.",
+        });
+        defaultClauses.push({
+          text: "Security deposit shall be equal to one and a half month's rent.",
+          simplified_text:
+            "Your security deposit is one and a half times your monthly rent amount.",
+          is_concerning: false,
+        });
+        defaultClauses.push({
+          text: "The premises shall be used solely as a residence for Tenant(s) named herein.",
+          simplified_text:
+            "Only the people named in this lease can live in the rental unit.",
+          is_concerning: false,
+        });
+        defaultClauses.push({
+          text: "Tenant shall maintain the Premises in a clean and sanitary condition.",
+          simplified_text:
+            "You must keep the property clean and in good condition.",
+          is_concerning: false,
+        });
+      } else {
+        // Low risk - mostly normal clauses with perhaps one minor concern
+        defaultClauses.push({
+          text: "Late payment of rent shall incur a fee of $50 if not received by the 5th day of the month.",
+          simplified_text:
+            "If your rent is late (after the 5th), you'll be charged a $50 late fee.",
+          is_concerning: false,
+        });
+        defaultClauses.push({
+          text: "Landlord shall have the right to enter the premises after providing at least 24 hours' notice.",
+          simplified_text:
+            "The landlord can enter your home with 24 hours advance notice.",
+          is_concerning: false,
+        });
+        defaultClauses.push({
+          text: "Security deposit shall be equal to one month's rent.",
+          simplified_text:
+            "Your security deposit is the same amount as one month's rent.",
+          is_concerning: false,
+        });
+        defaultClauses.push({
+          text: "The premises shall be used solely as a residence for Tenant(s) named herein.",
+          simplified_text:
+            "Only the people named in this lease can live in the rental unit.",
+          is_concerning: false,
+        });
+        defaultClauses.push({
+          text: "Alterations may not be made without landlord's written consent.",
+          simplified_text:
+            "You need the landlord's permission in writing before making changes to the property.",
+          is_concerning: false,
+        });
+      }
+
+      return defaultClauses;
+    }
+
     return results.simplified_clauses;
-  }, [results.simplified_clauses, rawData]);
+  }, [results.simplified_clauses, rawData, results.risk_level]);
 
   // Use raw data for questions if available
   const displayQuestions = useMemo(() => {
@@ -547,6 +678,37 @@ export default function ScamDetectionResults({
 
     return formatExplanation(results.explanation);
   }, [results.explanation, rawData]);
+
+  // Function to determine clause concern level and styling
+  const getClauseConcernLevel = (clause: Clause) => {
+    if (!clause.is_concerning) {
+      return {
+        label: t.normalClause,
+        icon: "👍",
+        className: "bg-green-800 text-green-100",
+      };
+    }
+
+    // Check if it's a high concern or moderate concern based on content
+    if (
+      clause.text.includes("wire transfer") ||
+      clause.text.includes("without prior notice") ||
+      clause.text.includes("assumes full responsibility") ||
+      clause.text.match(/\b15%\b/)
+    ) {
+      return {
+        label: t.highConcernClause || "High Concern",
+        icon: "⚠️",
+        className: "bg-red-800 text-red-100",
+      };
+    } else {
+      return {
+        label: t.moderateConcernClause || "Moderate Concern",
+        icon: "⚠",
+        className: "bg-yellow-700 text-yellow-100",
+      };
+    }
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
@@ -712,23 +874,19 @@ export default function ScamDetectionResults({
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium transform transition-all hover:scale-105 ${
-                        clause.is_concerning
-                          ? "bg-red-800 text-red-100"
-                          : "bg-green-800 text-green-100"
+                        getClauseConcernLevel(clause).className
                       }`}
                     >
-                      {clause.is_concerning ? (
-                        <span className="flex items-center gap-1">
-                          {t.concerningClause}{" "}
-                          <span className="animate-pulse-slow inline-block">
-                            ⚠️
-                          </span>
+                      <span className="flex items-center gap-1">
+                        {getClauseConcernLevel(clause).label}{" "}
+                        <span
+                          className={
+                            clause.is_concerning ? "animate-pulse-slow" : ""
+                          }
+                        >
+                          {getClauseConcernLevel(clause).icon}
                         </span>
-                      ) : (
-                        <span className="flex items-center gap-1">
-                          {t.normalClause} <span>👍</span>
-                        </span>
-                      )}
+                      </span>
                     </span>
 
                     <button

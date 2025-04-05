@@ -224,45 +224,122 @@ class GeminiService:
             if json_match:
                 json_str = json_match.group(1)
                 logger.info(f"Found JSON between backticks ({len(json_str)} chars)")
+                
+                # Handle problematic escape sequences that cause parse errors
+                # Replace escaped backslashes with a temporary marker
+                json_str = json_str.replace('\\\\', '__DOUBLE_BACKSLASH__')
+                # Replace escaped quotes
+                json_str = json_str.replace('\\"', '"')
+                # Fix invalid escape sequences
+                json_str = re.sub(r'\\(?!["\\/bfnrt])', r'\\\\', json_str)
+                # Restore properly escaped backslashes
+                json_str = json_str.replace('__DOUBLE_BACKSLASH__', '\\\\')
+                
                 try:
-                    # Handle problematic escape sequences that cause parse errors
-                    # Replace escaped backslashes with a temporary marker
-                    json_str = json_str.replace('\\\\', '__DOUBLE_BACKSLASH__')
-                    # Replace escaped quotes
-                    json_str = json_str.replace('\\"', '"')
-                    # Fix invalid escape sequences
-                    json_str = re.sub(r'\\(?!["\\/bfnrt])', r'\\\\', json_str)
-                    # Restore properly escaped backslashes
-                    json_str = json_str.replace('__DOUBLE_BACKSLASH__', '\\\\')
-                    
                     data = json.loads(json_str)
                     return data
                 except json.JSONDecodeError as e:
                     logger.warning(f"Found JSON block but failed to parse: {e}")
-                    # Try a more aggressive approach
+                    
+                    # Try specific fixes for common JSON formatting issues
+                    fixed_json = json_str
+                    
+                    # Fix missing commas between array elements or dict items
+                    if "Expecting ',' delimiter" in str(e):
+                        fixed_json = re.sub(r'"\s*\n\s*"', '",\n"', fixed_json)
+                        fixed_json = re.sub(r'}\s*\n\s*{', '},\n{', fixed_json)
+                        fixed_json = re.sub(r'"\s*\n\s*{', '",\n{', fixed_json)
+                        fixed_json = re.sub(r'}\s*\n\s*"', '},\n"', fixed_json)
+                        fixed_json = re.sub(r']\s*\n\s*\[', '],\n[', fixed_json)
+                        fixed_json = re.sub(r'"\s*\n\s*\[', '",\n[', fixed_json)
+                        fixed_json = re.sub(r']\s*\n\s*"', '],\n"', fixed_json)
+                    
+                    # Fix property names not enclosed in quotes
+                    if "Expecting property name enclosed in double quotes" in str(e):
+                        # Match unquoted property names at the beginning of lines
+                        fixed_json = re.sub(r'(?m)^(\s*)([a-zA-Z0-9_]+)(\s*:)', r'\1"\2"\3', fixed_json)
+                        # Match unquoted property names inside objects
+                        fixed_json = re.sub(r',\s*([a-zA-Z0-9_]+)(\s*:)', r', "\1"\2', fixed_json)
+                        # Fix specific case for first property in object
+                        fixed_json = re.sub(r'{\s*([a-zA-Z0-9_]+)(\s*:)', r'{ "\1"\2', fixed_json)
+                    
+                    # Try to parse after fixes
                     try:
-                        # Sanitize string by building a valid JSON object manually
-                        # Extract key fields we care about with regex
-                        scam_likelihood = "Medium"
-                        likelihood_match = re.search(r'"scam_likelihood":\s*"([^"]+)"', json_str)
-                        if likelihood_match:
-                            scam_likelihood = likelihood_match.group(1)
+                        data = json.loads(fixed_json)
+                        logger.info("Successfully fixed JSON formatting")
+                        return data
+                    except json.JSONDecodeError as e2:
+                        logger.warning(f"Failed to fix JSON: {e2}")
+                
+                # Try a more aggressive approach
+                try:
+                    # Extract key data using regex
+                    scam_likelihood = "Medium"
+                    likelihood_match = re.search(r'"scam_likelihood":\s*"([^"]+)"', json_str)
+                    if likelihood_match:
+                        scam_likelihood = likelihood_match.group(1)
+                    
+                    explanation = "Analysis completed"
+                    explanation_match = re.search(r'"explanation":\s*"(.*?)(?:(?<!\\)",)', json_str, re.DOTALL)
+                    if explanation_match:
+                        explanation = explanation_match.group(1).replace('\\"', '"')
+                    
+                    # Extract clauses array using regex
+                    clauses = []
+                    clauses_section_match = re.search(r'"concerning_clauses"\s*:\s*\[(.*?)\]', json_str, re.DOTALL)
+                    if clauses_section_match:
+                        clauses_text = clauses_section_match.group(1)
+                        
+                        # Try to extract individual clause objects
+                        clause_objects = re.findall(r'{(.*?)}', clauses_text, re.DOTALL)
+                        for clause_obj in clause_objects:
+                            original_match = re.search(r'"original_text"\s*:\s*"(.*?)(?:(?<!\\)",)', clause_obj, re.DOTALL)
+                            simplified_match = re.search(r'"simplified_text"\s*:\s*"(.*?)(?:(?<!\\)",)', clause_obj, re.DOTALL)
                             
-                        explanation = "Analysis completed"
-                        explanation_match = re.search(r'"explanation":\s*"([^"]+(?:\\.[^"]+)*)"', json_str)
-                        if explanation_match:
-                            explanation = explanation_match.group(1).replace('\\', '')
-                            
-                        # Construct a minimal valid JSON response
-                        return {
-                            "scam_likelihood": scam_likelihood,
-                            "explanation": explanation,
-                            "concerning_clauses": [],
-                            "suggested_questions": [],
-                            "action_items": []
-                        }
-                    except Exception as inner_e:
-                        logger.warning(f"Failed to extract with manual approach: {inner_e}")
+                            if original_match and simplified_match:
+                                clauses.append({
+                                    "original_text": original_match.group(1).replace('\\"', '"'),
+                                    "simplified_text": simplified_match.group(1).replace('\\"', '"'),
+                                    "is_concerning": True,
+                                    "reason": "Extracted from analysis"
+                                })
+                    
+                    # Extract questions array
+                    questions = []
+                    questions_match = re.search(r'"suggested_questions"\s*:\s*\[(.*?)\]', json_str, re.DOTALL)
+                    if questions_match:
+                        questions_text = questions_match.group(1)
+                        question_items = re.findall(r'"(.*?)(?:(?<!\\)",?)', questions_text)
+                        questions = [q.replace('\\"', '"') for q in question_items if len(q) > 5]
+                    
+                    # Extract action items
+                    actions = []
+                    actions_match = re.search(r'"action_items"\s*:\s*\[(.*?)\]', json_str, re.DOTALL)
+                    if actions_match:
+                        actions_text = actions_match.group(1)
+                        action_items = re.findall(r'"(.*?)(?:(?<!\\)",?)', actions_text)
+                        actions = [a.replace('\\"', '"') for a in action_items if len(a) > 5]
+                    
+                    # Construct response
+                    return {
+                        "scam_likelihood": scam_likelihood,
+                        "explanation": explanation,
+                        "concerning_clauses": clauses,
+                        "suggested_questions": questions,
+                        "action_items": actions
+                    }
+                except Exception as regex_error:
+                    logger.warning(f"Error in regex-based extraction: {regex_error}")
+            
+            # No valid JSON found in code blocks, try to find raw JSON
+            raw_json_match = re.search(r'({[\s\S]*?"scam_likelihood"[\s\S]*?})', response_text)
+            if raw_json_match:
+                try:
+                    data = json.loads(raw_json_match.group(1))
+                    logger.info("Found and parsed raw JSON")
+                    return data
+                except json.JSONDecodeError:
+                    logger.warning("Found raw JSON but failed to parse it")
             
             # No valid JSON found
             logger.warning("No valid JSON found in response")
@@ -463,12 +540,13 @@ class GeminiService:
     
     @staticmethod
     def _extract_action_items(response_text: str) -> List[str]:
-        """Extract action items from text."""
+        """Extract action items from the response text."""
         action_items = []
         
-        # Try to find a section about action items
+        # Try to find a section with action items
         section_patterns = [
-            r'(?:action\s+items|recommendations|steps\s+to\s+take)\s*:?\s*(.+?)(?=\n\n\s*[A-Z]|\n#|\n\*\*|$)',
+            r'(?:action\s+items|recommended\s+actions|suggestions|recommendations)\s*:?\s*(.+?)(?=\n\n\s*[A-Z#]|\n#|\n\*\*|$)',
+            r'(?:what\s+to\s+do|next\s+steps)\s*:?\s*(.+?)(?=\n\n\s*[A-Z#]|\n#|\n\*\*|$)'
         ]
         
         section_text = ""
@@ -479,43 +557,26 @@ class GeminiService:
                 break
         
         if section_text:
-            # Extract action items from the section
-            # Pattern 1: Look for numbered or bulleted items
-            action_matches = re.findall(r'(?:\d+\.|\*|\-|\•)\s+(.+?)(?=\n\s*(?:\d+\.|\*|\-|\•)|\n\n|\n#|\n\*\*|$)', 
-                                       section_text, re.DOTALL)
+            # Try to extract numbered or bulleted items
+            items = re.findall(r'(?:\d+\.|\*|\-|\•)\s+(.+?)(?=\n\s*(?:\d+\.|\*|\-|\•)|\n\n|\n#|\n\*\*|$)', 
+                              section_text, re.DOTALL)
             
-            if action_matches:
-                for item in action_matches:
-                    clean_item = item.strip()
-                    if len(clean_item) > 10 and clean_item not in action_items:
-                        action_items.append(clean_item)
+            if items:
+                for item in items:
+                    cleaned_item = item.strip()
+                    # Only add if it's a substantive item (not too short)
+                    if len(cleaned_item) > 10:
+                        action_items.append(cleaned_item)
         
-        # Default recommendations based on lease assessment
+        # If no action items found in a dedicated section, try to find them in the JSON
         if not action_items:
-            # Look for keywords to determine appropriate actions
-            lower_text = response_text.lower()
-            
-            if any(term in lower_text for term in ['scam', 'fraud', 'suspicious', 'very concerning']):
-                action_items = [
-                    "Exercise extreme caution with this rental",
-                    "Verify the landlord's identity and property ownership",
-                    "Never send money before viewing the property in person",
-                    "Consider reporting this listing if it shows signs of fraud"
-                ]
-            elif any(term in lower_text for term in ['concerning', 'problematic', 'questionable']):
-                action_items = [
-                    "Proceed with caution",
-                    "Request clarification on concerning clauses",
-                    "Consider having the lease reviewed by a tenant rights organization",
-                    "Negotiate modifications to questionable terms before signing"
-                ]
-            else:
-                action_items = [
-                    "Review the lease thoroughly before signing",
-                    "Ask questions about any unclear terms",
-                    "Request a walkthrough inspection before moving in",
-                    "Keep a signed copy of the lease for your records"
-                ]
+            # Look for an array of action items in the text
+            items_match = re.search(r'"action_items"\s*:\s*\[\s*(.*?)\s*\]', response_text, re.DOTALL)
+            if items_match:
+                items_text = items_match.group(1)
+                # Extract quoted strings from the array
+                quoted_items = re.findall(r'"([^"]+)"', items_text)
+                action_items.extend([item.strip() for item in quoted_items if len(item.strip()) > 10])
         
         return action_items
     

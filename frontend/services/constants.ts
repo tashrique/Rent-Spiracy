@@ -22,9 +22,9 @@ export const funQuotes = {
   ],
   hindi: [
     "अगर यह सच होने के लिए बहुत अच्छा लगता है, तो शायद इसमें छिपे हुए कैमरे और एक टीवी होस्ट हैं।",
-    "घोटालेबाज बुरे जादूगरों की तरह हैं - एक बार जब आप चाल जान लेते हैं, तो शो इतना प्रभावशाली नहीं रहता।",
+    "घोटालेबाज बुरे जादूगरों की तरह हैं - एक बार आप चाल जान लेते हैं, तो शो इतना प्रभावशाली नहीं रहता।",
     "याद रखें: आपके मकान मालिक को आपके रिसते नल को ठीक करना चाहिए, न कि आपके लॉटरी टिकट।",
-    "एक अच्छी डील के लिए आपके सोश্যोल सिक्योरिटी नंबर और आपके पसंदीदा बचपन के पालतू जानवर के नाम की आवश्यकता नहीं होनी चाहिए।",
+    "एक अच्छी डील के लिए आपके सोश্योल सिक्योरिटी नंबर और आपके पसंदीदा बचपन के पालतू जानवर के नाम की आवश्यकता नहीं होनी चाहिए।",
   ],
   korean: [
     "너무 좋아서 사실이라고 믿기 어렵다면, 아마도 숨겨진 카메라와 TV 진행자가 있을 겁니다.",
@@ -45,23 +45,23 @@ export const funQuotes = {
 export const defaultMockResults: ScamDetectionResponse = {
     id: "123",
     created_at: "2021-01-01",
-    scam_likelihood: "Medium",
-    trustworthiness_score: 65,
-    trustworthiness_grade: "C",
-    risk_level: "Medium Risk",
+    scam_likelihood: "High",
+    trustworthiness_score: 55,
+    trustworthiness_grade: "D",
+    risk_level: "High Risk",
     explanation:
-      "This listing has some concerning elements. The price is significantly below market average for the area and the landlord is requesting an unusually large deposit via wire transfer.",
+      "This lease agreement, while appearing like a standard residential lease at first glance, contains several concerning clauses that raise red flags and warrant a medium scam likelihood rating. The combination of aggressive financial terms, limitations on tenant rights, and unusual requirements like wire transfers and certified mail notifications creates a sense of imbalance that favors the landlord excessively. While not definitively a scam, the document's cumulative effect suggests a landlord potentially seeking to exploit a tenant's unfamiliarity with their rights or eagerness to secure housing. The high application fee, demand for wire transfer (which is difficult to trace and recover), stringent late fees, and the landlord's broad right of entry without notice are particularly problematic. The clauses related to lead paint and the landlord's disclaimer of responsibility for tenant belongings, while not necessarily malicious, further contribute to the impression of a landlord seeking to minimize their own liability and maximize profit. The lack of specific local legal references also raises concerns. A thorough review with a lawyer specializing in tenant rights is strongly recommended before signing this lease.",
     simplified_clauses: [
       {
-        text: "Tenant shall pay a security deposit equal to three months' rent via wire transfer within 24 hours of signing this agreement.",
+        text: "Tenant shall pay a non-refundable application fee of $500 via wire transfer within 24 hours of submitting application.",
         simplified_text:
-          "You must pay 3 months' rent as deposit through wire transfer within 1 day of signing.",
+          "You must pay a $500 non-refundable application fee through wire transfer within 1 day of applying.",
         is_concerning: true,
         reason:
-          "Unusually large security deposit and the requirement for wire transfer are red flags.",
+          "Unusually high application fee and the requirement for wire transfer are red flags.",
       },
       {
-        text: "Landlord may enter premises at any time without prior notice for inspection.",
+        text: "Landlord may enter premises at any time without prior notice for inspection or maintenance purposes.",
         simplified_text:
           "The landlord can enter your home anytime without telling you first.",
         is_concerning: true,
@@ -69,23 +69,73 @@ export const defaultMockResults: ScamDetectionResponse = {
           "This violates standard tenant rights to reasonable notice before entry.",
       },
       {
+        text: "Late payment of rent shall incur a fee of 15% of monthly rent plus $50 per day until paid in full.",
+        simplified_text:
+          "If your rent is late, you'll be charged 15% of your monthly rent plus $50 for each day it remains unpaid.",
+        is_concerning: true,
+        reason:
+          "These late fees are excessive and may violate laws in many jurisdictions that limit late fees.",
+      },
+      {
+        text: "Resident assumes full responsibility for all maintenance, including HVAC systems, appliances, plumbing, electrical systems, and structural elements.",
+        simplified_text:
+          "You're responsible for maintaining and repairing everything in the apartment, including major systems like heating and plumbing.",
+        is_concerning: true,
+        reason:
+          "Landlords typically remain responsible for major building systems and structural elements. This clause shifts unreasonable burden to the tenant."
+      },
+      {
+        text: "Late payment of rent shall incur a fee of 8% of monthly rent.",
+        simplified_text:
+          "If your rent is late, you'll be charged 8% of your monthly rent as a late fee.",
+        is_concerning: true,
+        reason:
+          "This late fee is somewhat high but may be legal depending on your jurisdiction."
+      },
+      {
+        text: "Security deposit shall be equal to two months' rent.",
+        simplified_text:
+          "Your security deposit is twice your monthly rent amount.",
+        is_concerning: true,
+        reason:
+          "While legal in some areas, a two-month security deposit is higher than standard in many markets."
+      },
+      {
         text: "The premises shall be used solely as a residence for Tenant(s) named herein.",
         simplified_text:
           "Only the people named in this lease can live in the rental unit.",
-        is_concerning: false,
+        is_concerning: false
       },
+      {
+        text: "Tenant shall maintain the Premises in a clean and sanitary condition.",
+        simplified_text:
+          "You must keep the property clean and in good condition.",
+        is_concerning: false
+      },
+      {
+        text: "Tenant shall not disturb neighbors or other tenants.",
+        simplified_text:
+          "You must not cause disturbances that would bother your neighbors.",
+        is_concerning: false
+      }
     ],
     suggested_questions: [
       "Can I pay the security deposit after viewing the property in person?",
       "Can we modify the lease to require 24-hour notice before entry?",
       "Is the landlord willing to accept payment methods other than wire transfer?",
       "Can you provide references from current tenants?",
+      "What is the justification for the $500 application fee?",
+      "Does the property have lead paint? If so, what remediation has been done?",
+      "Will you provide documentation of any previous damage to the unit before I move in?",
+      "Is the late fee structure negotiable?"
     ],
     action_items: [
-      "Request to view the property in person before sending any money",
-      "Ask for a written explanation of all fees and deposits",
-      "Verify the landlord's identity and ownership of the property",
-      "Consider consulting with a tenant rights organization"
+      "Consult with a lawyer specializing in tenant rights to review the lease agreement before signing.",
+      "Request written clarification on the landlord's entry policy, ensuring it aligns with local laws regarding reasonable notice.",
+      "Negotiate a lower security deposit and a more reasonable late fee structure.",
+      "Insist on a secure payment method other than wire transfer, such as a cashier's check or money order.",
+      "Request a detailed breakdown of the $500 application fee and inquire about its legality in your jurisdiction.",
+      "Document the condition of the property thoroughly with photos and videos before moving in."
     ]
   };
 
