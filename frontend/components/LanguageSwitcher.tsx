@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-type Language = "english" | "chinese" | "hindi" | "spanish";
+type Language =
+  | "english"
+  | "chinese"
+  | "hindi"
+  | "spanish"
+  | "korean"
+  | "bengali";
 
 interface LanguageOption {
   code: Language;
@@ -30,6 +36,16 @@ const languages: LanguageOption[] = [
     code: "hindi",
     name: "हिन्दी",
     flag: "🇮🇳",
+  },
+  {
+    code: "korean",
+    name: "한국어",
+    flag: "🇰🇷",
+  },
+  {
+    code: "bengali",
+    name: "বাংলা",
+    flag: "🇧🇩",
   },
 ];
 

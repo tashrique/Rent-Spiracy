@@ -1,6 +1,12 @@
 "use client";
 
-type Language = "english" | "chinese" | "hindi" | "spanish";
+type Language =
+  | "english"
+  | "chinese"
+  | "hindi"
+  | "spanish"
+  | "korean"
+  | "bengali";
 
 interface LanguageOption {
   code: Language;
@@ -34,6 +40,18 @@ const languages: LanguageOption[] = [
     nativeName: "हिन्दी",
     flag: "🇮🇳",
   },
+  {
+    code: "korean",
+    name: "Korean",
+    nativeName: "한국어",
+    flag: "🇰🇷",
+  },
+  {
+    code: "bengali",
+    name: "Bengali",
+    nativeName: "বাংলা",
+    flag: "🇧🇩",
+  },
 ];
 
 interface LanguageSelectorProps {
@@ -46,7 +64,7 @@ export default function LanguageSelector({
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-2 text-white">
+        <h1 className="text-4xl font-bold mb-2 text-white pt-20">
           Welcome to Rent-Spiracy
         </h1>
         <p className="text-xl text-gray-300">
