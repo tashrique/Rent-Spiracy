@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { scamDetectionApi, ScamDetectionResponse } from "../services/api";
+import { translations } from "../services/constants";
 
 interface ScamDetectionFormProps {
   language: string;
@@ -17,85 +18,8 @@ export default function ScamDetectionForm({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-
-  const translations = {
-    english: {
-      title: "Check Your Rental Agreement",
-      subtitle: "Detect potential scams and problematic clauses in your lease",
-      urlLabel: "Listing URL",
-      addressLabel: "Property Address",
-      fileLabel: "Upload Lease Document",
-      fileHelp: "Supported formats: PDF, DOC, DOCX",
-      submitButton: "Analyze Now",
-      atLeastOneField: "Please provide at least one: URL, address, or document",
-      submittingText: "Analyzing... This may take a moment",
-      errorText: "An error occurred. Please try again.",
-    },
-    spanish: {
-      title: "Verifica Tu Contrato de Alquiler",
-      subtitle:
-        "Detecta posibles estafas y cláusulas problemáticas en tu contrato",
-      urlLabel: "URL del Anuncio",
-      addressLabel: "Dirección de la Propiedad",
-      fileLabel: "Cargar Documento de Contrato",
-      fileHelp: "Formatos soportados: PDF, DOC, DOCX",
-      submitButton: "Analizar Ahora",
-      atLeastOneField:
-        "Por favor proporciona al menos uno: URL, dirección o documento",
-      submittingText: "Analizando... Esto puede tomar un momento",
-      errorText: "Ocurrió un error. Por favor, inténtalo de nuevo.",
-    },
-    chinese: {
-      title: "检查您的租赁协议",
-      subtitle: "检测租约中潜在的诈骗和问题条款",
-      urlLabel: "房源链接",
-      addressLabel: "房产地址",
-      fileLabel: "上传租约文件",
-      fileHelp: "支持的格式：PDF、DOC、DOCX",
-      submitButton: "立即分析",
-      atLeastOneField: "请至少提供以下之一：链接、地址或文件",
-      submittingText: "分析中...这可能需要一点时间",
-      errorText: "发生错误。请再试一次。",
-    },
-    hindi: {
-      title: "अपने किराया अनुबंध की जांच करें",
-      subtitle:
-        "अपने लीज़ में संभावित धोखाधड़ी और समस्याग्रस्त खंडों का पता लगाएं",
-      urlLabel: "लिस्टिंग यूआरएल",
-      addressLabel: "संपत्ति का पता",
-      fileLabel: "लीज़ दस्तावेज़ अपलोड करें",
-      fileHelp: "समर्थित प्रारूप: PDF, DOC, DOCX",
-      submitButton: "अभी विश्लेषण करें",
-      atLeastOneField: "कृपया कम से कम एक प्रदान करें: URL, पता, या दस्तावेज़",
-      submittingText: "विश्लेषण हो रहा है... इसमें कुछ समय लग सकता है",
-      errorText: "एक त्रुटि हुई। कृपया पुनः प्रयास करें।",
-    },
-    korean: {
-      title: "임대 계약서 확인하기",
-      subtitle: "임대 계약서의 잠재적 사기와 문제가 있는 조항 탐지",
-      urlLabel: "매물 URL",
-      addressLabel: "부동산 주소",
-      fileLabel: "임대 계약서 업로드",
-      fileHelp: "지원 형식: PDF, DOC, DOCX",
-      submitButton: "지금 분석하기",
-      atLeastOneField: "URL, 주소 또는 문서 중 하나 이상을 제공해주세요",
-      submittingText: "분석 중... 잠시 기다려주세요",
-      errorText: "오류가 발생했습니다. 다시 시도해주세요.",
-    },
-    bengali: {
-      title: "আপনার ভাড়ার চুক্তি যাচাই করুন",
-      subtitle: "আপনার লিজে সম্ভাব্য প্রতারণা এবং সমস্যাযুক্ত ধারা সনাক্ত করুন",
-      urlLabel: "লিস্টিং URL",
-      addressLabel: "সম্পত্তির ঠিকানা",
-      fileLabel: "লিজ ডকুমেন্ট আপলোড করুন",
-      fileHelp: "সমর্থিত ফরম্যাট: PDF, DOC, DOCX",
-      submitButton: "এখনই বিশ্লেষণ করুন",
-      atLeastOneField: "অনুগ্রহ করে কমপক্ষে একটি দিন: URL, ঠিকানা, বা ডকুমেন্ট",
-      submittingText: "বিশ্লেষণ করা হচ্ছে... এটি কিছুক্ষণ সময় নিতে পারে",
-      errorText: "একটি ত্রুটি ঘটেছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
-    },
-  };
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [analysisStage, setAnalysisStage] = useState<string | null>(null);
 
   const t =
     translations[language as keyof typeof translations] || translations.english;
@@ -103,6 +27,9 @@ export default function ScamDetectionForm({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      // Reset progress when a new file is selected
+      setUploadProgress(0);
+      setAnalysisStage(null);
     }
   };
 
@@ -117,38 +44,105 @@ export default function ScamDetectionForm({
     }
 
     setIsSubmitting(true);
+    setUploadProgress(0);
+    setAnalysisStage(t.analysisStage1);
+
+    // Convert UI language to API language format
+    const apiLanguage = language as
+      | "english"
+      | "spanish"
+      | "chinese"
+      | "hindi"
+      | "korean"
+      | "bengali";
 
     try {
-      let fileContent = "";
+      let response;
 
-      // Handle file if it exists
-      if (selectedFile) {
-        const reader = new FileReader();
-        fileContent = await new Promise((resolve, reject) => {
-          reader.onload = (event) => {
-            if (event.target && typeof event.target.result === "string") {
-              resolve(event.target.result);
-            } else {
-              reject(new Error("Failed to read file"));
-            }
-          };
-          reader.onerror = () => reject(new Error("Failed to read file"));
-          reader.readAsText(selectedFile);
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          const newProgress = prev + Math.random() * 15;
+          // Update stage based on progress
+          if (newProgress > 25 && newProgress <= 50) {
+            setAnalysisStage(t.analysisStage2);
+          } else if (newProgress > 50 && newProgress <= 75) {
+            setAnalysisStage(t.analysisStage3);
+          } else if (newProgress > 75) {
+            setAnalysisStage(t.analysisStage4);
+          }
+          return Math.min(newProgress, 95); // Cap at 95% until complete
         });
+      }, 500);
+
+      // If a file is selected, use the file upload endpoint
+      if (selectedFile) {
+        // For PDF files, we need to use the specialized endpoint
+        const isPDF = selectedFile.name.toLowerCase().endsWith(".pdf");
+        console.log(
+          `Uploading ${isPDF ? "PDF" : "text"} file: ${selectedFile.name}`
+        );
+
+        // Always use the uploadDocument method which handles both PDF and text files
+        response = await scamDetectionApi.uploadDocument(
+          selectedFile,
+          listingUrl || undefined,
+          address || undefined,
+          apiLanguage,
+          false // voice output
+        );
+
+        console.log("File upload response:", response);
+      } else {
+        console.log("File not selected");
       }
 
-      // Send data to API
-      const response = await scamDetectionApi.analyzeRental({
-        listingUrl: listingUrl || undefined,
-        address: address || undefined,
-        fileContent: fileContent || undefined,
-      });
+      // Clear the progress interval
+      clearInterval(progressInterval);
+      setUploadProgress(100);
 
-      // For development/demo, if the backend isn't available, use mock results
+      // Check if we got a valid response
+      if (!response || !response.explanation) {
+        console.error("Invalid response format:", response);
+        throw new Error("Received invalid response format from server");
+      }
+
+      // Pass results to parent component
       onSubmit(response);
     } catch (err) {
       console.error("Error submitting form:", err);
       setError(t.errorText);
+
+      // // Use mock data for demo if real API fails
+      // const mockResult: ScamDetectionResponse = {
+      //   id: "mock-id-" + Date.now(),
+      //   scam_likelihood: "Medium",
+      //   explanation:
+      //     "This is a mock analysis since the API request failed. " +
+      //     "We received: URL: " +
+      //     (listingUrl || "None") +
+      //     ", Address: " +
+      //     (address || "None") +
+      //     ", Document: " +
+      //     (selectedFile ? selectedFile.name : "None"),
+      //   simplified_clauses: [
+      //     {
+      //       text: "Example lease clause",
+      //       simplified_text: "This is a simplified explanation of the clause",
+      //       is_concerning: false,
+      //     },
+      //   ],
+      //   suggested_questions: [
+      //     "Is a security deposit required?",
+      //     "When is rent due each month?",
+      //     "Are pets allowed?",
+      //     "What utilities are included in the rent?",
+      //     "What is the policy for maintenance and repairs?",
+      //   ],
+      //   created_at: new Date().toISOString(),
+      // };
+
+      // onSubmit(mockResult);
     } finally {
       setIsSubmitting(false);
     }
@@ -175,6 +169,7 @@ export default function ScamDetectionForm({
         <div className="absolute -top-6 -right-6 w-12 h-12 rounded-full bg-blue-500/20 blur-xl animate-float"></div>
         <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-pink-500/20 blur-xl animate-pulse-slow"></div>
 
+        {/* URL input */}
         <div className="group">
           <label
             className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
@@ -190,6 +185,7 @@ export default function ScamDetectionForm({
               value={listingUrl}
               onChange={(e) => setListingUrl(e.target.value)}
               placeholder="https://"
+              disabled={isSubmitting}
             />
             {listingUrl && (
               <span className="absolute right-3 top-2 text-lg animate-bounceIn">
@@ -199,6 +195,7 @@ export default function ScamDetectionForm({
           </div>
         </div>
 
+        {/* Address input */}
         <div className="group">
           <label
             className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
@@ -213,6 +210,8 @@ export default function ScamDetectionForm({
               className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              placeholder="123 Main Street, Apt 4B"
+              disabled={isSubmitting}
             />
             {address && (
               <span className="absolute right-3 top-2 text-lg animate-bounceIn">
@@ -222,44 +221,109 @@ export default function ScamDetectionForm({
           </div>
         </div>
 
+        {/* File upload */}
         <div className="group">
           <label
             className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
-            htmlFor="fileUpload"
+            htmlFor="documentFile"
           >
-            <div className="flex items-center gap-1">
-              {t.fileLabel}
-              <span className="text-lg animate-float inline-block">📄</span>
-            </div>
+            {t.fileLabel}
           </label>
-          <input
-            id="fileUpload"
-            type="file"
-            className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white file:text-white file:bg-blue-700 file:border-0 file:rounded file:px-3 file:py-1 file:mr-2 file:hover:bg-blue-600 transition-all"
-            accept=".pdf,.doc,.docx"
-            onChange={handleFileChange}
-          />
-          <p className="text-xs text-gray-400 mt-1">{t.fileHelp}</p>
+          <div className="relative">
+            <input
+              id="documentFile"
+              type="file"
+              onChange={handleFileChange}
+              className="hidden"
+              accept=".txt,.pdf,.doc,.docx"
+              disabled={isSubmitting}
+            />
+            <label
+              htmlFor="documentFile"
+              className="cursor-pointer w-full p-3 border-2 border-dashed border-gray-600 rounded bg-gray-700/50 text-gray-300 hover:border-blue-500 hover:text-blue-300 transition-all flex items-center justify-center"
+            >
+              <span className="mr-2 text-xl">📄</span>
+              {selectedFile ? selectedFile.name : t.fileHelp}
+            </label>
+          </div>
         </div>
 
-        {error && (
-          <div className="bg-red-900/30 text-red-200 p-3 rounded-md text-sm">
-            {error}
+        {/* Submit button */}
+        <div className="pt-2">
+          <button
+            type="submit"
+            className={`w-full py-3 px-4 rounded font-semibold transition-colors flex items-center justify-center ${
+              isSubmitting
+                ? "bg-blue-600 text-white cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
+            }`}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <svg
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                {t.submittingText}
+              </>
+            ) : (
+              <>
+                <span className="mr-2">{t.submitButton}</span>
+                <span className="transform transition-transform group-hover:translate-x-1">
+                  →
+                </span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Progress bar and analysis stage */}
+        {isSubmitting && (
+          <div className="mt-4 space-y-2 animate-fadeIn">
+            <div className="w-full bg-gray-700 rounded-full h-2.5">
+              <div
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out relative overflow-hidden"
+                style={{ width: `${uploadProgress}%` }}
+              >
+                <span className="absolute inset-0 bg-white/20 animate-pulse-slow"></span>
+              </div>
+            </div>
+            <div className="flex justify-between items-center text-sm text-gray-300">
+              <div className="flex items-center">
+                <span className="inline-block mr-2 animate-bounce">⚡</span>
+                <span className="font-medium">{analysisStage}</span>
+              </div>
+              <span>{Math.round(uploadProgress)}%</span>
+            </div>
           </div>
         )}
 
-        <p className="text-sm text-gray-300">{t.atLeastOneField}</p>
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-4 rounded-lg disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] group relative overflow-hidden"
-        >
-          <span className="relative z-10">
-            {isSubmitting ? <span>{t.submittingText}</span> : t.submitButton}
-          </span>
-          <span className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-500 group-hover:from-blue-500 group-hover:to-blue-400 transition-colors duration-200"></span>
-        </button>
+        {/* Error message */}
+        {error && (
+          <div className="text-red-400 bg-red-900/20 p-3 rounded-md border border-red-800 animate-fadeIn">
+            <div className="flex items-start">
+              <span className="mr-2 mt-0.5">⚠️</span>
+              <p>{error}</p>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

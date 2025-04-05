@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface Clause {
   text: string;
@@ -13,9 +13,14 @@ interface ScamDetectionResultsProps {
   language: string;
   results: {
     scam_likelihood: "Low" | "Medium" | "High";
+    trustworthiness_score: number;
+    trustworthiness_grade: "A" | "B" | "C" | "D" | "F";
+    risk_level: "Low Risk" | "Medium Risk" | "High Risk" | "Very High Risk";
     explanation: string;
+    action_items?: string[];
     simplified_clauses: Clause[];
     suggested_questions: string[];
+    raw_response?: string;
   };
   onBack: () => void;
 }
@@ -30,8 +35,13 @@ export default function ScamDetectionResults({
   const [savedQuestions, setSavedQuestions] = useState<string[]>([]);
   const [showExplainer, setShowExplainer] = useState(false);
 
-  // Calculate a numeric score based on the likelihood and concerning clauses
-  const getNumericScore = () => {
+  // Use trustworthiness score from API if available, otherwise calculate it
+  const score = results.trustworthiness_score || getNumericScore();
+  const grade = results.trustworthiness_grade || getLetterGrade();
+  const riskLevel = results.risk_level || getRiskLevel();
+
+  // Calculate a numeric score based on the likelihood and concerning clauses (fallback)
+  function getNumericScore() {
     // Base score from likelihood
     let score = 0;
 
@@ -60,15 +70,31 @@ export default function ScamDetectionResults({
 
     // Ensure score stays in range 0-100
     return Math.max(0, Math.min(100, score));
-  };
-
-  const score = getNumericScore();
+  }
 
   // Get color for score display
   const getScoreColor = () => {
     if (score >= 80) return "text-green-400";
-    if (score >= 50) return "text-yellow-400";
+    if (score >= 60) return "text-yellow-400";
+    if (score >= 45) return "text-orange-400";
     return "text-red-400";
+  };
+
+  const getGradeColor = () => {
+    switch (grade) {
+      case "A":
+        return "text-green-400";
+      case "B":
+        return "text-green-300";
+      case "C":
+        return "text-yellow-400";
+      case "D":
+        return "text-orange-400";
+      case "F":
+        return "text-red-400";
+      default:
+        return "text-gray-400";
+    }
   };
 
   const toggleClauseExpansion = (index: number) => {
@@ -87,13 +113,21 @@ export default function ScamDetectionResults({
     }
   };
 
-  const getLetterGrade = () => {
+  // Fallback letter grade calculation
+  function getLetterGrade() {
     if (score >= 90) return "A";
     if (score >= 80) return "B";
     if (score >= 70) return "C";
     if (score >= 60) return "D";
     return "F";
-  };
+  }
+
+  // Fallback risk level determination
+  function getRiskLevel() {
+    if (score >= 80) return "Low Risk";
+    if (score >= 60) return "Medium Risk";
+    return "High Risk";
+  }
 
   const translations = {
     english: {
@@ -132,6 +166,8 @@ export default function ScamDetectionResults({
       copied: "Copied!",
       emailQuestions: "Email these questions",
       noSavedQuestionsYet: "Save important questions for reference",
+      legalDisclaimerText:
+        "This assessment is based on automated analysis and may not catch all scams or lease issues. Always exercise caution and consider professional legal advice when needed.",
     },
     spanish: {
       title: "Resultados de Detección de Estafas",
@@ -170,6 +206,8 @@ export default function ScamDetectionResults({
       copied: "¡Copiado!",
       emailQuestions: "Enviar estas preguntas por correo",
       noSavedQuestionsYet: "Guarda preguntas importantes para referencia",
+      legalDisclaimerText:
+        "Esta evaluación se basa en un análisis automatizado y puede no capturar todas las estafas o problemas de arrendamiento. Siempre ejerza precaución y considere la consulta de un abogado profesional cuando sea necesario.",
     },
     chinese: {
       title: "诈骗检测结果",
@@ -206,6 +244,8 @@ export default function ScamDetectionResults({
       copied: "已复制！",
       emailQuestions: "通过电子邮件发送这些问题",
       noSavedQuestionsYet: "保存重要问题以供参考",
+      legalDisclaimerText:
+        "此评估基于自动分析，可能无法捕获所有诈骗或租赁问题。始终谨慎行事并考虑在需要时寻求专业法律建议。",
     },
     hindi: {
       title: "धोखाधड़ी का पता लगाने के परिणाम",
@@ -234,7 +274,7 @@ export default function ScamDetectionResults({
       lowRiskAdvice:
         "यह किराया वैध प्रतीत होता है, लेकिन व्यक्तिगत जानकारी प्रदान करते समय या भुगतान करते समय हमेशा सावधानी बरतें।",
       mediumRiskAdvice:
-        "सावधानी से आगे बढ़ें। हम किसी भी भुगतान करने से पहले व्यक्तिगत रूप से संपत्ति देखने और सभी समझौतों को लिखित रूप में प्राप्त करने की सलाह देते हैं।",
+        "सावधानी से आगे बढ़ें। हम किसी भी भुगतान करने से पहले व्यक्तिगत रूप से संपत्ति देखने और सब समझौतों को लिखित रूप में प्राप्त करने की सलाह देते हैं।",
       highRiskAdvice:
         "इस किराये में संभावित धोखाधड़ी के कई चेतावनी संकेत दिखाए गए हैं। हम दृढ़ता से आगे की पुष्टि होने तक किसी भी भुगतान या व्यक्तिगत जानकारी साझा करने से बचने की सलाह देते हैं।",
       explainerButton: "जानें कैसे स्कोर काम करते हैं",
@@ -243,6 +283,8 @@ export default function ScamDetectionResults({
       copied: "कॉपी हो गया!",
       emailQuestions: "इन प्रश्नों को ईमेल करें",
       noSavedQuestionsYet: "संदर्भ के लिए महत्वपूर्ण प्रश्न सहेजें",
+      legalDisclaimerText:
+        "यह टूल एक कानूनी दस्तावेज़ नहीं है और कानूनी सलाह नहीं देता है। एस्ट शुधुं जानकारीप्रदान के लिए है।",
     },
     korean: {
       title: "사기 탐지 결과",
@@ -280,6 +322,8 @@ export default function ScamDetectionResults({
       copied: "복사됨!",
       emailQuestions: "이메일로 질문 보내기",
       noSavedQuestionsYet: "참고용으로 중요한 질문 저장",
+      legalDisclaimerText:
+        "이 도구는 법률 문서가 아니며 법률 조언을 제공하지 않습니다. 정보 목적으로만 사용됩니다.",
     },
     bengali: {
       title: "প্রতারণা সনাক্তকরণ ফলাফল",
@@ -306,7 +350,7 @@ export default function ScamDetectionResults({
       noSavedQuestions: "এখনও কোন সংরক্ষিত প্রশ্ন নেই",
       saveForLater: "পরে সংরক্ষণ করুন",
       lowRiskAdvice:
-        "এই ভাড়াটি বৈধ বলে মনে হচ্ছে, তবে ব্যক্তিগত তথ্য প্রদান বা অর্থ প্রদান করার সময় সর্বদা সতর্কতা অবলম্বন করুন।",
+        "এই ভাড়াটি বৈধ বলে মনে হচ্ছে, তবুও ব্যক্তিগত তথ্য প্রদান বা অর্থ প্রদান করার সময় সর্বদা সতর্কতা অবলম্বন করুন।",
       mediumRiskAdvice:
         "সতর্কতার সাথে এগিয়ে যান। আমরা অর্থ প্রদানের আগে সম্পত্তিটি সরাসরি দেখতে এবং সব চুক্তি লিখিতভাবে নিতে সুপারিশ করি।",
       highRiskAdvice:
@@ -317,48 +361,25 @@ export default function ScamDetectionResults({
       copied: "কপি করা হয়েছে!",
       emailQuestions: "এই প্রশ্নগুলি ইমেল করুন",
       noSavedQuestionsYet: "রেফারেন্সের জন্য গুরুত্বপূর্ণ প্রশ্ন সংরক্ষণ করুন",
+      legalDisclaimerText:
+        "এই টুল একটি কানুনী দস্তাবেজ নয় এবং কানুনী সালাউট নয়। এটি শুধুমাত্র তথ্যপ্রদানের জন্য হয়।",
     },
   };
 
   const t =
     translations[language as keyof typeof translations] || translations.english;
 
+  // Get color for likelihood display
   const getLikelihoodColor = (likelihood: string) => {
     switch (likelihood) {
       case "Low":
-        return "bg-green-800 text-green-100";
+        return "text-green-400";
       case "Medium":
-        return "bg-yellow-700 text-yellow-100";
+        return "text-yellow-400";
       case "High":
-        return "bg-red-800 text-red-100";
+        return "text-red-400";
       default:
-        return "bg-gray-700 text-gray-100";
-    }
-  };
-
-  const getLikelihoodTranslation = (likelihood: string) => {
-    switch (likelihood) {
-      case "Low":
-        return t.low;
-      case "Medium":
-        return t.medium;
-      case "High":
-        return t.high;
-      default:
-        return likelihood;
-    }
-  };
-
-  const getAdviceForRiskLevel = () => {
-    switch (results.scam_likelihood) {
-      case "Low":
-        return t.lowRiskAdvice;
-      case "Medium":
-        return t.mediumRiskAdvice;
-      case "High":
-        return t.highRiskAdvice;
-      default:
-        return t.mediumRiskAdvice;
+        return "text-gray-400";
     }
   };
 
@@ -381,6 +402,152 @@ export default function ScamDetectionResults({
       });
   };
 
+  // Helper function to clean and format explanation text
+  const formatExplanation = (explanation: string): string => {
+    // Split to remove metadata section
+    const mainContent = explanation.split("\n\nRequest Information")[0];
+
+    // Handle if the explanation contains JSON
+    if (
+      mainContent.includes("```json") ||
+      (mainContent.startsWith("{") && mainContent.includes('"explanation":'))
+    ) {
+      // Try to extract JSON from code block
+      const jsonBlockMatch = mainContent.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonBlockMatch && jsonBlockMatch[1]) {
+        try {
+          const data = JSON.parse(jsonBlockMatch[1]);
+          if (data.explanation) {
+            return data.explanation;
+          }
+        } catch {
+          // Failed to parse JSON, continue to other methods
+        }
+      }
+
+      // Try to parse the whole content as JSON
+      if (
+        mainContent.trim().startsWith("{") &&
+        mainContent.trim().endsWith("}")
+      ) {
+        try {
+          const data = JSON.parse(mainContent);
+          if (data.explanation) {
+            return data.explanation;
+          }
+        } catch {
+          // Failed to parse JSON, continue to other methods
+        }
+      }
+
+      // Try to extract the explanation field using regex
+      const explanationMatch = mainContent.match(
+        /"explanation"\s*:\s*"([^"]+)"/
+      );
+      if (explanationMatch && explanationMatch[1]) {
+        return explanationMatch[1];
+      }
+
+      // Last resort: clean up the JSON manually
+      return mainContent
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .replace(/{|}|"|\[|\]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    return mainContent;
+  };
+
+  // Function to parse raw response JSON if available
+  const parseRawResponse = () => {
+    if (!results.raw_response) return null;
+
+    try {
+      // Try to find and extract JSON from code blocks
+      const jsonMatch = results.raw_response.match(
+        /```(?:json)?\s*({\s*".*?})\s*```/
+      );
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]);
+      }
+
+      // Try to find JSON directly in the response
+      const jsonPattern = /({\s*".*?})/;
+      const directMatch = results.raw_response.match(jsonPattern);
+      if (directMatch) {
+        return JSON.parse(directMatch[1]);
+      }
+    } catch (e) {
+      console.error("Failed to parse raw response JSON:", e);
+    }
+
+    return null;
+  };
+
+  // Get raw data if available
+  const rawData = parseRawResponse();
+
+  // Use raw data for clauses if available and not overridden by simplified_clauses
+  const displayClauses = useMemo(() => {
+    if (results.simplified_clauses && results.simplified_clauses.length > 0) {
+      return results.simplified_clauses;
+    }
+
+    if (rawData && (rawData.concerning_clauses || rawData.clauses)) {
+      const rawClauses = rawData.concerning_clauses || rawData.clauses || [];
+      // Use an interface instead of any
+      interface RawClause {
+        original_text?: string;
+        text?: string;
+        simplified_text?: string;
+        is_concerning?: boolean;
+        reason?: string;
+      }
+      return rawClauses.map((clause: RawClause) => ({
+        text: clause.original_text || clause.text || "",
+        simplified_text: clause.simplified_text || "",
+        is_concerning:
+          clause.is_concerning !== undefined ? clause.is_concerning : true,
+        reason: clause.reason || "",
+      }));
+    }
+
+    return results.simplified_clauses;
+  }, [results.simplified_clauses, rawData]);
+
+  // Use raw data for questions if available
+  const displayQuestions = useMemo(() => {
+    if (
+      rawData &&
+      rawData.suggested_questions &&
+      rawData.suggested_questions.length > 0
+    ) {
+      return rawData.suggested_questions;
+    }
+
+    return results.suggested_questions;
+  }, [results.suggested_questions, rawData]);
+
+  // Use raw data for action items if available
+  const displayActionItems = useMemo(() => {
+    if (rawData && rawData.action_items && rawData.action_items.length > 0) {
+      return rawData.action_items;
+    }
+
+    return results.action_items || [];
+  }, [results.action_items, rawData]);
+
+  // Get explanation from raw data if available
+  const displayExplanation = useMemo(() => {
+    if (rawData && rawData.explanation && rawData.explanation.length > 20) {
+      return rawData.explanation;
+    }
+
+    return formatExplanation(results.explanation);
+  }, [results.explanation, rawData]);
+
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
       <div className="text-center mb-8">
@@ -394,6 +561,10 @@ export default function ScamDetectionResults({
           )}
         </div>
         <h1 className="text-3xl font-bold mb-2 text-white">{t.title}</h1>
+        <p className="text-gray-300 max-w-2xl mx-auto">
+          This detailed analysis evaluates the trustworthiness and potential
+          risks of your lease document.
+        </p>
       </div>
 
       <div className="space-y-8">
@@ -424,8 +595,8 @@ export default function ScamDetectionResults({
 
             <div className="flex flex-col items-center">
               <div className="text-sm text-gray-400 uppercase mb-1">Grade</div>
-              <div className={`text-5xl font-bold ${getScoreColor()}`}>
-                {getLetterGrade()}
+              <div className={`text-5xl font-bold ${getGradeColor()}`}>
+                {grade}
               </div>
             </div>
 
@@ -435,13 +606,15 @@ export default function ScamDetectionResults({
               <div className="text-sm text-gray-400 uppercase mb-2">
                 Risk Level
               </div>
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-medium transform transition-transform hover:scale-105 ${getLikelihoodColor(
-                  results.scam_likelihood
-                )}`}
-              >
-                {getLikelihoodTranslation(results.scam_likelihood)}
-              </span>
+              <div className="flex items-center justify-center my-3">
+                <div
+                  className={`text-xl font-bold ${getLikelihoodColor(
+                    results.scam_likelihood
+                  )}`}
+                >
+                  {riskLevel}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -485,7 +658,10 @@ export default function ScamDetectionResults({
 
           <div className="mt-4">
             <h3 className="font-medium mb-2 text-gray-200">{t.explanation}</h3>
-            <p className="text-gray-300">{results.explanation}</p>
+            <div className="text-gray-300 bg-gray-900/30 p-4 rounded-lg border border-gray-700 leading-relaxed">
+              {/* Use displayExplanation which may use raw JSON data */}
+              {displayExplanation}
+            </div>
 
             <div className="mt-6">
               <button
@@ -497,11 +673,17 @@ export default function ScamDetectionResults({
               </button>
 
               {showAdvice && (
-                <div className="mt-4 p-4 bg-gray-700/50 rounded-lg border border-gray-600 animate-bounceIn">
-                  <h4 className="font-medium text-white mb-2">
+                <div className="p-5 bg-gray-700 animate-fadeIn border-t border-gray-600 mt-2 rounded-lg">
+                  <h3 className="font-semibold text-white mb-3 text-lg flex items-center gap-2">
                     {t.adviceTitle}
-                  </h4>
-                  <p className="text-gray-300">{getAdviceForRiskLevel()}</p>
+                    <span className="animate-float">💡</span>
+                  </h3>
+                  {/* Use displayActionItems which may use raw JSON data */}
+                  <ul className="space-y-2 text-gray-300 leading-relaxed list-disc pl-5">
+                    {displayActionItems.map((item: string, i: number) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
@@ -509,16 +691,20 @@ export default function ScamDetectionResults({
         </div>
 
         {/* Lease Clauses Analysis */}
-        {results.simplified_clauses.length > 0 && (
+        {displayClauses.length > 0 && (
           <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700 relative overflow-hidden group hover:border-blue-500 transition-colors duration-300">
             <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-purple-500/20 blur-xl animate-float"></div>
 
             <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
               {t.clausesSummary}
               <span className="animate-float inline-block">📋</span>
+              <span className="ml-auto text-sm text-gray-400">
+                {displayClauses.filter((c: Clause) => c.is_concerning).length}{" "}
+                concerning / {displayClauses.length} total
+              </span>
             </h2>
             <div className="space-y-4">
-              {results.simplified_clauses.map((clause, index) => (
+              {displayClauses.map((clause: Clause, index: number) => (
                 <div
                   key={index}
                   className="border-b border-gray-700 pb-4 last:border-0 last:pb-0 hover:bg-gray-800/50 p-3 rounded-md transition-colors"
@@ -579,7 +765,7 @@ export default function ScamDetectionResults({
         )}
 
         {/* Suggested Questions */}
-        {results.suggested_questions.length > 0 && (
+        {displayQuestions.length > 0 && (
           <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700 relative overflow-hidden group hover:border-blue-500 transition-colors duration-300">
             <div className="absolute -top-6 -left-6 w-12 h-12 rounded-full bg-pink-500/20 blur-xl animate-pulse-slow"></div>
 
@@ -616,7 +802,7 @@ export default function ScamDetectionResults({
             </div>
 
             <ul className="list-none space-y-3 mb-6">
-              {results.suggested_questions.map((question, index) => (
+              {displayQuestions.map((question: string, index: number) => (
                 <li
                   key={index}
                   className="text-gray-300 flex items-start gap-2 p-2 hover:bg-gray-700/30 rounded transition-all transform hover:translate-x-1 group/item"
@@ -680,9 +866,7 @@ export default function ScamDetectionResults({
 
         {/* Legal Disclaimer */}
         <div className="text-xs text-gray-500 italic bg-gray-800/50 p-3 rounded border border-gray-700 text-center">
-          {t.legalDisclaimer}: This assessment is based on automated analysis
-          and may not catch all scams or lease issues. Always exercise caution
-          and consider professional legal advice when needed.
+          {t.legalDisclaimer}: {t.legalDisclaimerText}
         </div>
 
         <div className="flex justify-center mt-10">

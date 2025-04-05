@@ -1,67 +1,94 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.utils.db import Database
+from app.routers import analysis, file_upload, documents
+import uvicorn
 import os
 import logging
 from dotenv import load_dotenv
-from app.middleware.rate_limiter import RateLimiter
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
 )
-logger = logging.getLogger("rent-spiracy-api")
+logger = logging.getLogger("rent-spiracy")
 
 # Load environment variables
 load_dotenv()
 
-# Get configuration from environment
-PORT = int(os.getenv("PORT", 8000))
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
-
-logger.info(f"Starting server with CORS origins: {CORS_ORIGINS}")
-
+# Create FastAPI app
 app = FastAPI(
     title="Rent-Spiracy API",
-    description="API for the Rent-Spiracy application",
+    description="Backend API for the Rent-Spiracy application, analyzing rental listings for potential scams",
     version="0.1.0"
 )
 
-# Add CORS middleware
+# Configure CORS
+origins = [
+    "http://localhost:3000",  # Frontend origin
+    "http://localhost:5173",  # Vite dev server
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "https://rent-spiracy.vercel.app",
+    "https://rentspiracy.tech"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all Vercel app deployments
+    allow_credentials=False,  # Set to False since we're using 'omit' in frontend
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=86400,  # Cache preflight requests for 24 hours
 )
 
-# Add rate limiting middleware
-app.middleware("http")(RateLimiter(requests_per_minute=60))
+# Include routers
+app.include_router(analysis.router)
+app.include_router(file_upload.router)
+app.include_router(documents.router)
 
-# Import routers if they exist
-try:
-    from app.routers import scam_detection, users, listings
-    app.include_router(scam_detection.router)
-    app.include_router(users.router, prefix="/api/v1")
-    app.include_router(listings.router, prefix="/api/v1")
-    logger.info("Loaded routers successfully")
-except ImportError as e:
-    logger.error(f"Failed to import routers: {str(e)}")
-    # If router modules don't exist yet, create basic endpoints
-    pass
+
+@app.on_event("startup")
+async def startup_db_client():
+    logger.info("Starting Rent-Spiracy API")
+    try:
+        await Database.connect_db()
+        logger.info("Connected to database")
+    except Exception as e:
+        logger.error(f"Failed to connect to database: {str(e)}")
+        # Continue anyway, as we can still function with mock data
+
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    logger.info("Shutting down Rent-Spiracy API")
+    try:
+        await Database.close_db()
+        logger.info("Disconnected from database")
+    except Exception as e:
+        logger.error(f"Error during database disconnect: {str(e)}")
 
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Rent-Spiracy API"}
+    return {
+        "message": "Welcome to the Rent-Spiracy API",
+        "docs": "/docs",
+        "status": "online"
+    }
 
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
+# This allows the file to be run directly or through uvicorn
 if __name__ == "__main__":
-    import uvicorn
-    logger.info(f"Starting uvicorn server on port {PORT}")
-    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
