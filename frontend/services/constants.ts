@@ -24,7 +24,7 @@ export const funQuotes = {
     "अगर यह सच होने के लिए बहुत अच्छा लगता है, तो शायद इसमें छिपे हुए कैमरे और एक टीवी होस्ट हैं।",
     "घोटालेबाज बुरे जादूगरों की तरह हैं - एक बार जब आप चाल जान लेते हैं, तो शो इतना प्रभावशाली नहीं रहता।",
     "याद रखें: आपके मकान मालिक को आपके रिसते नल को ठीक करना चाहिए, न कि आपके लॉटरी टिकट।",
-    "एक अच्छी डील के लिए आपके सोशल सिक्योरिटी नंबर और आपके पसंदीदा बचपन के पालतू जानवर के नाम की आवश्यकता नहीं होनी चाहिए।",
+    "एक अच्छी डील के लिए आपके सोश্যोल सिक्योरिटी नंबर और आपके पसंदीदा बचपन के पालतू जानवर के नाम की आवश्यकता नहीं होनी चाहिए।",
   ],
   korean: [
     "너무 좋아서 사실이라고 믿기 어렵다면, 아마도 숨겨진 카메라와 TV 진행자가 있을 겁니다.",
@@ -46,6 +46,9 @@ export const defaultMockResults: ScamDetectionResponse = {
     id: "123",
     created_at: "2021-01-01",
     scam_likelihood: "Medium",
+    trustworthiness_score: 65,
+    trustworthiness_grade: "C",
+    risk_level: "Medium Risk",
     explanation:
       "This listing has some concerning elements. The price is significantly below market average for the area and the landlord is requesting an unusually large deposit via wire transfer.",
     simplified_clauses: [
@@ -78,6 +81,12 @@ export const defaultMockResults: ScamDetectionResponse = {
       "Is the landlord willing to accept payment methods other than wire transfer?",
       "Can you provide references from current tenants?",
     ],
+    action_items: [
+      "Request to view the property in person before sending any money",
+      "Ask for a written explanation of all fees and deposits",
+      "Verify the landlord's identity and ownership of the property",
+      "Consider consulting with a tenant rights organization"
+    ]
   };
 
 
