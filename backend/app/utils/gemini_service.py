@@ -62,6 +62,16 @@ class GeminiService:
             language=language
         )
         
+        # Debug logging to see what language was used in the prompt
+        logger.info(f"Using language: {language}")
+        logger.info(f"Prompt excerpt (first 500 chars): {prompt[:500]}")
+        # Use proper escaping for the string split
+        language_instructions = []
+        for line in prompt.split('\n'):
+            if 'language' in line.lower() or 'LANGUAGE' in line:
+                language_instructions.append(line)
+        logger.info(f"Prompt excerpt (language instructions): {language_instructions[:5]}")
+        
         # Get the model
         model = cls.get_model()
         
@@ -588,25 +598,36 @@ class GeminiService:
         language: Optional[str] = "english"
     ) -> str:
         """Generate the prompt for Gemini API."""
+        # Force language to be a string value, not an Enum object
+        if hasattr(language, 'value'):
+            language = language.value
+        
+        # Make sure we have a default language value
+        if not language:
+            language = "english"
+            
+        # Log what language we're using
+        print(f"Generating prompt with language: {language}")
+        
         prompt_parts = [
-            "You are an experienced legal expert specializing in rental agreements and lease documents. Your task is to analyze the provided lease document in EXTREME DETAIL to identify potential scams, concerning clauses, tenant rights issues, and any other problematic elements.",
+            f"You are an experienced legal expert specializing in rental agreements and lease documents. Your task is to analyze the provided lease document in EXTREME DETAIL to identify potential scams, concerning clauses, tenant rights issues, and any other problematic elements. Your entire analysis MUST be written in {language.upper()}. Do NOT provide any analysis in English unless {language.upper()} is English.",
             
-            "First, determine if this is actually a lease agreement. Be VERY CAREFUL with this determination - only classify as 'not a lease' if the document is clearly something else like a tax form, bank statement, or random text. A basic or template lease should still be identified as a lease agreement, even if it's incomplete. If it has sections about rent, security deposit, tenant obligations, etc., it is likely a lease. If it's not a lease agreement, explicitly state this is NOT a lease agreement, explain what it appears to be, and why this indicates a potential scam.",
+            f"First, determine if this is actually a lease agreement. Be VERY CAREFUL with this determination - only classify as 'not a lease' if the document is clearly something else like a tax form, bank statement, or random text. A basic or template lease should still be identified as a lease agreement, even if it's incomplete. If it has sections about rent, security deposit, tenant obligations, etc., it is likely a lease. If it's not a lease agreement, explicitly state this is NOT a lease agreement, explain what it appears to be, and why this indicates a potential scam. This explanation MUST be in {language.upper()}.",
             
-            "\n\nYour detailed analysis should include:"
-            "\n1. A determination of scam likelihood (Low, Medium, or High) with thorough explanation"
-            "\n2. A comprehensive assessment of the lease as a whole - provide DETAILED analysis of at least 300 words"
-            "\n3. A detailed breakdown of EACH concerning clause with:"
-            "\n   - The exact text from the lease"
-            "\n   - A simplified explanation in plain language"
-            "\n   - Why this clause is concerning or problematic"
-            "\n   - Whether it might be illegal or unenforceable in most jurisdictions"
-            "\n   - Specific recommendations for the tenant regarding this clause"
-            "\n4. At least 6-8 specific questions the tenant should ask before signing, with explanations of why each question is important"
-            "\n5. Actionable recommendations - specific actions the tenant should take based on your analysis"
+            f"\n\nYour detailed analysis should include (ALL IN {language.upper()}):"
+            f"\n1. A determination of scam likelihood (Low, Medium, or High) with thorough explanation"
+            f"\n2. A comprehensive assessment of the lease as a whole - provide DETAILED analysis of at least 300 words"
+            f"\n3. A detailed breakdown of EACH concerning clause with:"
+            f"\n   - The exact text from the lease"
+            f"\n   - A simplified explanation in plain language"
+            f"\n   - Why this clause is concerning or problematic"
+            f"\n   - Whether it might be illegal or unenforceable in most jurisdictions"
+            f"\n   - Specific recommendations for the tenant regarding this clause"
+            f"\n4. At least 6-8 specific questions the tenant should ask before signing, with explanations of why each question is important"
+            f"\n5. Actionable recommendations - specific actions the tenant should take based on your analysis"
 
 
-            "All of the analysis should be in {language}. If the language is not English, translate the analysis into English before returning the response."
+            f"\nIMPORTANT: EVERY SINGLE WORD of your analysis MUST be written in {language.upper()}. DO NOT use English at all unless {language.upper()} is English."
         ]
         
         # Add context information if available
@@ -627,54 +648,67 @@ class GeminiService:
             prompt_parts.append("\n\nNote: No lease document was provided.")
         
         # Request structured JSON output
-        prompt_parts.append(
-            "\n\nPlease return your analysis in the following JSON format, wrapped in triple backticks:"
-            "\n```json"
-            "\n{"
-            '\n  "scam_likelihood": "Low|Medium|High",'
-            '\n  "explanation": "Your detailed 300+ word explanation here with thorough assessment of the entire lease...",'
-            '\n  "concerning_clauses": ['
-            '\n    {'
-            '\n      "original_text": "Exact clause text from document...",'
-            '\n      "simplified_text": "Simplified explanation in plain language...",'
-            '\n      "is_concerning": true,'
-            '\n      "reason": "Detailed explanation of why this clause is concerning, potentially illegal, or unfair..."'
-            '\n    },'
-            '\n    {'
-            '\n      "original_text": "Another concerning clause...",'
-            '\n      "simplified_text": "Plain language explanation...",'
-            '\n      "is_concerning": true,'
-            '\n      "reason": "Explanation of the issue with this clause..."'
-            '\n    }'
-            '\n  ],'
-            '\n  "suggested_questions": ['
-            '\n    "Specific question about a concerning term?",'
-            '\n    "Another important question to ask?",'
-            '\n    "A question about rights or responsibilities?",'
-            '\n    "A question about a potentially unfair term?",'
-            '\n    "A question about missing information?",'
-            '\n    "A question about unclear language or terms?",'
-            '\n    "A question about legal rights and protections?",'
-            '\n    "A question about responsibilities not mentioned in the lease?"'
-            '\n  ],'
-            '\n  "action_items": ['
-            '\n    "Specific action the tenant should take, like \'Request written clarification about clause X\'",'
-            '\n    "Another action recommendation, like \'Verify the landlord is the actual property owner\'",'
-            '\n    "A third action recommendation, like \'Consult with a tenant rights attorney about clause Y\'"'
-            '\n  ]'
-            '\n}'
-            "\n```"
-            "\n\nBe extremely thorough in your analysis. Identify ALL concerning clauses, not just the most obvious ones."
-            "\nIf you find potentially illegal or highly unfair terms, be sure to highlight them prominently."
-            "\nInclude at least 6-8 detailed, specific questions tailored to the exact issues in this lease document."
-            "\nIf you can't find any concerning clauses, explain thoroughly why the lease appears to be fair and standard."
-            "\nVERY IMPORTANT: Your response MUST be valid JSON that can be parsed programmatically - check that all quotes and braces match."
-            "\nDO NOT include explanatory text outside the JSON block."
-            "\nDO NOT nest multiple levels of quotes that would break JSON parsing."
-            "\nEnsure your response is correctly formatted JSON and can be parsed directly. All text should be in {language}."
-        )
+        json_format_instructions = f"""
+\n\nPlease return your analysis in the following JSON format, COMPLETELY IN {language.upper()}, wrapped in triple backticks:
+\n```json
+\n{{
+\n  "scam_likelihood": "Low|Medium|High",
+\n  "explanation": "Your detailed 300+ word explanation here with thorough assessment of the entire lease... MUST BE IN {language.upper()}",
+\n  "concerning_clauses": [
+\n    {{
+\n      "original_text": "Exact clause text from document...",
+\n      "simplified_text": "Simplified explanation in {language.upper()}...",
+\n      "is_concerning": true,
+\n      "reason": "Detailed explanation of why this clause is concerning, potentially illegal, or unfair... MUST BE IN {language.upper()}"
+\n    }},
+\n    {{
+\n      "original_text": "Another concerning clause...",
+\n      "simplified_text": "Plain language explanation in {language.upper()}...",
+\n      "is_concerning": true,
+\n      "reason": "Explanation of the issue with this clause... MUST BE IN {language.upper()}"
+\n    }}
+\n  ],
+\n  "suggested_questions": [
+\n    "Specific question about a concerning term? IN {language.upper()}",
+\n    "Another important question to ask? IN {language.upper()}",
+\n    "A question about rights or responsibilities? IN {language.upper()}",
+\n    "A question about a potentially unfair term? IN {language.upper()}",
+\n    "A question about missing information? IN {language.upper()}",
+\n    "A question about unclear language or terms? IN {language.upper()}",
+\n    "A question about legal rights and protections? IN {language.upper()}",
+\n    "A question about responsibilities not mentioned in the lease? IN {language.upper()}"
+\n  ],
+\n  "action_items": [
+\n    "Specific action the tenant should take, like 'Request written clarification about clause X' IN {language.upper()}",
+\n    "Another action recommendation, like 'Verify the landlord is the actual property owner' IN {language.upper()}",
+\n    "A third action recommendation, like 'Consult with a tenant rights attorney about clause Y' IN {language.upper()}"
+\n  ]
+\n}}
+\n```
+"""
+        prompt_parts.append(json_format_instructions)
         
-        return "\n".join(prompt_parts)
+        prompt_parts.append(f"""
+\nBe extremely thorough in your analysis. Identify ALL concerning clauses, not just the most obvious ones.
+\nIf you find potentially illegal or highly unfair terms, be sure to highlight them prominently.
+\nInclude at least 6-8 detailed, specific questions tailored to the exact issues in this lease document.
+\nIf you can't find any concerning clauses, explain thoroughly why the lease appears to be fair and standard.
+\nVERY IMPORTANT: Your response MUST be valid JSON that can be parsed programmatically - check that all quotes and braces match.
+\nDO NOT include explanatory text outside the JSON block.
+\nDO NOT nest multiple levels of quotes that would break JSON parsing.
+\nEnsure your response is correctly formatted JSON and can be parsed directly.
+\nALL OF THE TEXT INSIDE THE JSON, EVERY SINGLE WORD, MUST BE IN {language.upper()}.
+\nFINAL REMINDER: YOUR ENTIRE RESPONSE SHOULD BE IN {language.upper()} only. Do not use English at all unless {language.upper()} is English.
+""")
+        
+        # Combine all parts
+        result = "\n".join(prompt_parts)
+        
+        # Double check explicit mention of language in the result
+        if language.lower() not in result.lower():
+            print(f"WARNING: Language {language} not found in prompt!")
+            
+        return result
     
     @staticmethod
     def _get_generation_config():

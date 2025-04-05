@@ -42,41 +42,43 @@ export default function ScamDetectionResults({
 
   // Calculate a numeric score based on the likelihood and concerning clauses (fallback)
   function getNumericScore() {
-    // Base score from likelihood
+    // Base score from likelihood - MORE GENEROUS STARTING POINTS
     let score = 0;
 
     switch (results.scam_likelihood) {
       case "Low":
-        score = 85;
+        score = 92; // Increased from 85
         break;
       case "Medium":
-        score = 60;
+        score = 78; // Increased from 60
         break;
       case "High":
-        score = 30;
+        score = 50; // Increased from 30
         break;
     }
 
-    // Adjust based on concerning clauses
+    // Adjust based on concerning clauses - LESS SEVERE PENALTIES
     const concerningClausesCount = results.simplified_clauses.filter(
       (c) => c.is_concerning
     ).length;
     const totalClauses = results.simplified_clauses.length;
 
     if (totalClauses > 0) {
-      // Deduct up to 15 points based on ratio of concerning clauses
-      score -= Math.round((concerningClausesCount / totalClauses) * 15);
+      // Deduct up to 8 points (reduced from 15) based on ratio of concerning clauses
+      // Also added weighting to make penalties less severe
+      const impactRatio = Math.min(0.8, concerningClausesCount / totalClauses);
+      score -= Math.round(impactRatio * 8);
     }
 
     // Ensure score stays in range 0-100
     return Math.max(0, Math.min(100, score));
   }
 
-  // Get color for score display
+  // Get color for score display - MORE GENEROUS COLOR THRESHOLDS
   const getScoreColor = () => {
-    if (score >= 80) return "text-green-400";
-    if (score >= 60) return "text-yellow-400";
-    if (score >= 45) return "text-orange-400";
+    if (score >= 75) return "text-green-400";
+    if (score >= 55) return "text-yellow-400";
+    if (score >= 40) return "text-orange-400";
     return "text-red-400";
   };
 
@@ -113,19 +115,19 @@ export default function ScamDetectionResults({
     }
   };
 
-  // Fallback letter grade calculation
+  // Fallback letter grade calculation - MORE GENEROUS GRADING
   function getLetterGrade() {
-    if (score >= 90) return "A";
-    if (score >= 80) return "B";
-    if (score >= 70) return "C";
-    if (score >= 60) return "D";
+    if (score >= 85) return "A";
+    if (score >= 70) return "B";
+    if (score >= 55) return "C";
+    if (score >= 40) return "D";
     return "F";
   }
 
-  // Fallback risk level determination
+  // Fallback risk level determination - MORE GENEROUS RISK LEVELS
   function getRiskLevel() {
-    if (score >= 80) return "Low Risk";
-    if (score >= 60) return "Medium Risk";
+    if (score >= 70) return "Low Risk";
+    if (score >= 45) return "Medium Risk";
     return "High Risk";
   }
 
@@ -170,6 +172,21 @@ export default function ScamDetectionResults({
         "This assessment is based on automated analysis and may not catch all scams or lease issues. Always exercise caution and consider professional legal advice when needed.",
       highConcernClause: "High Concern",
       moderateConcernClause: "Moderate Concern",
+      detailedAnalysisDesc:
+        "This detailed analysis evaluates the trustworthiness and potential risks of your lease document.",
+      grade: "Grade",
+      riskLevel: "Risk Level",
+      algorithmExplainerIntro:
+        "Our algorithm analyzes multiple factors to generate a trustworthiness score:",
+      leaseAnalysisFactor: "Lease analysis - identifying problematic clauses",
+      priceComparisonFactor: "Price comparison with market rates",
+      paymentTermsFactor:
+        "Evaluation of payment terms and security deposit requirements",
+      landlordCommunicationFactor:
+        "Assessment of landlord communication patterns",
+      propertyVerificationFactor: "Property information verification",
+      scoreRangeExplanation:
+        "Scores 80-100 are considered trustworthy, 50-79 require caution, and below 50 show significant warning signs.",
     },
     spanish: {
       title: "Resultados de Detección de Estafas",
@@ -212,6 +229,23 @@ export default function ScamDetectionResults({
         "Esta evaluación se basa en un análisis automatizado y puede no capturar todas las estafas o problemas de arrendamiento. Siempre ejerza precaución y considere la consulta de un abogado profesional cuando sea necesario.",
       highConcernClause: "Alto Riesgo",
       moderateConcernClause: "Riesgo Moderado",
+      detailedAnalysisDesc:
+        "Este análisis detallado evalúa la confiabilidad y los posibles riesgos de su documento de arrendamiento.",
+      grade: "Calificación",
+      riskLevel: "Nivel de Riesgo",
+      algorithmExplainerIntro:
+        "Nuestro algoritmo analiza varios factores para generar una puntuación de confiabilidad:",
+      leaseAnalysisFactor:
+        "Análisis de arrendamiento - identificar cláusulas problemáticas",
+      priceComparisonFactor: "Comparación de precios con tasas de mercado",
+      paymentTermsFactor:
+        "Evaluación de términos de pago y requisitos de depósito de seguridad",
+      landlordCommunicationFactor:
+        "Evaluación de patrones de comunicación del propietario",
+      propertyVerificationFactor:
+        "Verificación de información sobre la propiedad",
+      scoreRangeExplanation:
+        "Las puntuaciones de 80 a 100 se consideran confiables, de 50 a 79 requieren precaución y menos de 50 muestran signos de advertencia significativos.",
     },
     chinese: {
       title: "诈骗检测结果",
@@ -252,6 +286,17 @@ export default function ScamDetectionResults({
         "此评估基于自动分析，可能无法捕获所有诈骗或租赁问题。始终谨慎行事并考虑在需要时寻求专业法律建议。",
       highConcernClause: "高风险",
       moderateConcernClause: "中等风险",
+      detailedAnalysisDesc: "此详细分析评估了您的租赁文件的可靠性和潜在风险。",
+      grade: "等级",
+      riskLevel: "风险水平",
+      algorithmExplainerIntro: "我们的算法分析多个因素以生成可信度评分：",
+      leaseAnalysisFactor: "租赁分析 - 识别问题条款",
+      priceComparisonFactor: "与市场利率的价格比较",
+      paymentTermsFactor: "评估付款条款和安全存款要求",
+      landlordCommunicationFactor: "评估房东沟通模式",
+      propertyVerificationFactor: "财产信息验证",
+      scoreRangeExplanation:
+        "分数80-100被认为是可信的，50-79需要谨慎，低于50显示重大警告信号。",
     },
     hindi: {
       title: "धोखाधड़ी का पता लगाने के परिणाम",
@@ -280,7 +325,7 @@ export default function ScamDetectionResults({
       lowRiskAdvice:
         "यह किराया वैध प्रतीत होता है, लेकिन व्यक्तिगत जानकारी प्रदान करते समय या भुगतान करते समय हमेशा सावधानी बरतें।",
       mediumRiskAdvice:
-        "सावधानी से आगे बढ़ें। हम किसी भी भुगतान करने से पहले व्यक्तिगत रूप से संपत्ति देखने और सब समझौतों को लिखित रूप में प्राप्त करने की सलाह देते हैं।",
+        "सावधानी से आगे बढ़ें। हम किसी भी भुगतान करने के लिए पहले व्यक्तिगत रूप से संपत्ति देखने और सब समझौतों को लिखित रूप में प्राप्त करने की सलाह देते हैं।",
       highRiskAdvice:
         "इस किराये में संभावित धोखाधड़ी के कई चेतावनी संकेत दिखाए गए हैं। हम दृढ़ता से आगे की पुष्टि होने तक किसी भी भुगतान या व्यक्तिगत जानकारी साझा करने से बचने की सलाह देते हैं।",
       explainerButton: "जानें कैसे स्कोर काम करते हैं",
@@ -293,6 +338,20 @@ export default function ScamDetectionResults({
         "यह टूल एक कानूनी दस्तावेज़ नहीं है और कानूनी सलाह नहीं देता है। एस्ट शुधुं जानकारीप्रदान के लिए है।",
       highConcernClause: "उच्च जोखिम",
       moderateConcernClause: "मध्यम जोखिम",
+      detailedAnalysisDesc:
+        "इस विस्तृत विश्लेषण द्वारा आपके किराये के फाइलों की विश्वसनीयता और संभव जोखिमों का आकलन किया गया है।",
+      grade: "ग्रेड",
+      riskLevel: "जोखिम का स्तर",
+      algorithmExplainerIntro:
+        "हमारा एल्गोरिथम कई कारकों को विश्वसनीयता स्कोर उत्पन्न करने के लिए विश्लेषण करता है:",
+      leaseAnalysisFactor: "किराये का विश्लेषण - समस्यापूर्ण क्लॉज पहचानना",
+      priceComparisonFactor: "बाजार दरों के साथ कीमत तुलना",
+      paymentTermsFactor:
+        "भुगतान के शर्तों का आकलन और सुरक्षा जमा की आवश्यकताओं का आकलन",
+      landlordCommunicationFactor: "राउंट कॉम्युनिकेशन पैटर्न का आकलन",
+      propertyVerificationFactor: "संपत्ति की जानकारी सत्यापन",
+      scoreRangeExplanation:
+        "अंक 80-100 को विश्वसनीय माना जाता है, 50-79 प্रयोजन प्रयोजन एवं 50 नीचे गुरुत्वपूर्ण चिह्न देखाते हैं।",
     },
     korean: {
       title: "사기 탐지 결과",
@@ -334,6 +393,19 @@ export default function ScamDetectionResults({
         "이 도구는 법률 문서가 아니며 법률 조언을 제공하지 않습니다. 정보 목적으로만 사용됩니다.",
       highConcernClause: "높은 위험",
       moderateConcernClause: "중간 위험",
+      detailedAnalysisDesc:
+        "이 상세 분석은 주택 계약서의 신뢰도와 잠재적인 위험을 평가합니다.",
+      grade: "등급",
+      riskLevel: "위험 수준",
+      algorithmExplainerIntro:
+        "우리의 알고리즘은 신뢰도 점수를 생성하기 위해 여러 요소를 분석합니다:",
+      leaseAnalysisFactor: "임대 분석 - 문제 조건 식별",
+      priceComparisonFactor: "시장 금리와의 가격 비교",
+      paymentTermsFactor: "지불 조건 및 안전 예금 요건 평가",
+      landlordCommunicationFactor: "임주인 커뮤니케이션 패턴 평가",
+      propertyVerificationFactor: "속성 정보 확인",
+      scoreRangeExplanation:
+        "점수 80-100은 신뢰할 수 있음을 간주하고, 50-79는 주의가 필요하며, 50 미만은 중요한 경고 신호를 보여줍니다.",
     },
     bengali: {
       title: "প্রতারণা সনাক্তকরণ ফলাফল",
@@ -375,6 +447,19 @@ export default function ScamDetectionResults({
         "এই টুল একটি কানুনী দস্তাবেজ নয় এবং কানুনী সালাউট নয়। এটি শুধুমাত্র তথ্যপ্রদানের জন্য হয়।",
       highConcernClause: "উচ্চ ঝুঁকি",
       moderateConcernClause: "মাঝারি ঝুঁকি",
+      detailedAnalysisDesc:
+        "এই বিস্তারিত বিশ্লেষণটি আপনার কিরায় সম্পন্ন ফাইলের বিশ্বাসযোগ্যতা এবং সম্ভাব্য জোখিমগুলি আকলন করেছে।",
+      grade: "গ্রেড",
+      riskLevel: "জোখিমের স্তর",
+      algorithmExplainerIntro:
+        "আমাদের অ্যালগোরিদম বিশ্বাসযোগ্যতা স্কোর উত্পন্ন করার জন্য বিভিন্ন উপাদান বিশ্লেষণ করে:",
+      leaseAnalysisFactor: "কিরায় বিশ্লেষণ - সমস্যাপূর্ণ ক্লাউজ পন্থক করা",
+      priceComparisonFactor: "বাজার দরের সাথে দাম তুলনা",
+      paymentTermsFactor: "ভাড়া শর্তাবলী এবং সিকিউরিটি জমা আবশন পরিমাপ",
+      landlordCommunicationFactor: "ভাড়ায়নী কমিউনিকেশন প্যাটার্ন পরিমাপ",
+      propertyVerificationFactor: "প্রপার্টি তথ্য পরিশোধন",
+      scoreRangeExplanation:
+        "অংক 80-100 বিশ্বাসযোগ্য মনে করা হয়, 50-79 প্রয়োজন প্রয়োজন এবং 50 নীচে গুরুত্বপূর্ণ চিহ্ন দেখায়।",
     },
   };
 
@@ -414,62 +499,124 @@ export default function ScamDetectionResults({
       });
   };
 
-  // Helper function to clean and format explanation text
-  const formatExplanation = (explanation: string): string => {
-    // Split to remove metadata section
-    const mainContent = explanation.split("\n\nRequest Information")[0];
+  // Add this function near the formatExplanation function to highlight important keywords
+  const highlightWarningWords = (text: string): string => {
+    if (!text) return "";
 
-    // Handle if the explanation contains JSON
-    if (
-      mainContent.includes("```json") ||
-      (mainContent.startsWith("{") && mainContent.includes('"explanation":'))
-    ) {
-      // Try to extract JSON from code block
-      const jsonBlockMatch = mainContent.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonBlockMatch && jsonBlockMatch[1]) {
-        try {
-          const data = JSON.parse(jsonBlockMatch[1]);
-          if (data.explanation) {
-            return data.explanation;
-          }
-        } catch {
-          // Failed to parse JSON, continue to other methods
-        }
-      }
+    // Define warning words in different languages
+    const warningWords = {
+      english: [
+        "scam",
+        "fraud",
+        "suspicious",
+        "concerning",
+        "red flag",
+        "illegal",
+        "warning",
+        "caution",
+        "risk",
+        "dangerous",
+        "misleading",
+        "deceptive",
+      ],
+      spanish: [
+        "estafa",
+        "fraude",
+        "sospechoso",
+        "preocupante",
+        "alerta",
+        "ilegal",
+        "advertencia",
+        "precaución",
+        "riesgo",
+        "peligroso",
+        "engañoso",
+      ],
+      chinese: [
+        "欺诈",
+        "骗局",
+        "可疑",
+        "担忧",
+        "危险",
+        "警告",
+        "非法",
+        "风险",
+        "误导",
+        "欺骗",
+      ],
+      hindi: [
+        "धोखा",
+        "जालसाजी",
+        "संदिग्ध",
+        "चिंताजनक",
+        "खतरा",
+        "गैरकानूनी",
+        "चेतावनी",
+        "जोखिम",
+      ],
+      korean: [
+        "사기",
+        "의심스러운",
+        "불법",
+        "위험",
+        "경고",
+        "주의",
+        "리스크",
+        "오해",
+      ],
+      bengali: [
+        "প্রতারণা",
+        "জালিয়াতি",
+        "সন্দেহজনক",
+        "উদ্বেগজনক",
+        "বিপদ",
+        "অবৈধ",
+        "সতর্কতা",
+      ],
+    };
 
-      // Try to parse the whole content as JSON
-      if (
-        mainContent.trim().startsWith("{") &&
-        mainContent.trim().endsWith("}")
-      ) {
-        try {
-          const data = JSON.parse(mainContent);
-          if (data.explanation) {
-            return data.explanation;
-          }
-        } catch {
-          // Failed to parse JSON, continue to other methods
-        }
-      }
+    // Select words based on current language
+    const selectedWords =
+      warningWords[language as keyof typeof warningWords] ||
+      warningWords.english;
 
-      // Try to extract the explanation field using regex
-      const explanationMatch = mainContent.match(
-        /"explanation"\s*:\s*"([^"]+)"/
+    // Replace warning words with highlighted versions
+    let highlightedText = text;
+    selectedWords.forEach((word) => {
+      // Case-insensitive replacement with regex
+      const regex = new RegExp(`(${word})`, "gi");
+      highlightedText = highlightedText.replace(
+        regex,
+        '<span class="bg-red-900/30 text-red-300 px-1 rounded font-medium">$1</span>'
       );
-      if (explanationMatch && explanationMatch[1]) {
-        return explanationMatch[1];
-      }
+    });
 
-      // Last resort: clean up the JSON manually
-      return mainContent
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .replace(/{|}|"|\[|\]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-    }
+    return highlightedText;
+  };
 
-    return mainContent;
+  // And now modify the formatExplanation function to use this highlighting
+  const formatExplanation = (explanation: string): string => {
+    if (!explanation) return "";
+
+    // Clean up excess whitespace
+    let formattedText = explanation.replace(/\n{3,}/g, "\n\n");
+
+    // Remove escaped backslashes that appear in the text
+    formattedText = formattedText
+      .replace(/\\'/g, "'")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+
+    // Add paragraph breaks
+    formattedText = formattedText
+      .split("\n\n")
+      .map((para) => `<p class="mb-3">${para.replace(/\n/g, " ")}</p>`)
+      .join("");
+
+    // Apply highlighting to warning words
+    formattedText = highlightWarningWords(formattedText);
+
+    return formattedText;
   };
 
   // Function to parse raw response JSON if available
@@ -724,8 +871,7 @@ export default function ScamDetectionResults({
         </div>
         <h1 className="text-3xl font-bold mb-2 text-white">{t.title}</h1>
         <p className="text-gray-300 max-w-2xl mx-auto">
-          This detailed analysis evaluates the trustworthiness and potential
-          risks of your lease document.
+          {t.detailedAnalysisDesc}
         </p>
       </div>
 
@@ -746,19 +892,69 @@ export default function ScamDetectionResults({
           </h2>
 
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex flex-col items-center mb-4 md:mb-0">
-              <div className={`text-6xl font-bold ${getScoreColor()} mb-2`}>
+            <div className="flex flex-col items-center mb-4 md:mb-0 relative">
+              <div
+                className={`text-6xl font-bold ${getScoreColor()} mb-2 transition-all duration-700 ease-in-out hover:scale-110 hover:brightness-110 relative z-10`}
+                style={{
+                  textShadow: "0 0 10px rgba(255,255,255,0.2)",
+                  animation: "pulse 2s infinite",
+                }}
+              >
                 {score}
+                <style jsx>{`
+                  @keyframes pulse {
+                    0% {
+                      transform: scale(1);
+                    }
+                    50% {
+                      transform: scale(1.03);
+                    }
+                    100% {
+                      transform: scale(1);
+                    }
+                  }
+                `}</style>
               </div>
               <div className="text-sm text-gray-400">/ 100</div>
+
+              {/* Score progress indicator - visual representation */}
+              <div className="w-32 h-3 bg-gray-700 rounded-full mt-2 overflow-hidden relative">
+                <div
+                  className="h-full rounded-full transition-all duration-1000 ease-out"
+                  style={{
+                    width: `${score}%`,
+                    background: `linear-gradient(90deg, 
+                      ${
+                        score >= 70
+                          ? "#34D399"
+                          : score >= 45
+                          ? "#FBBF24"
+                          : "#F87171"
+                      } 0%, 
+                      ${
+                        score >= 70
+                          ? "#10B981"
+                          : score >= 45
+                          ? "#F59E0B"
+                          : "#EF4444"
+                      } 100%)`,
+                  }}
+                ></div>
+              </div>
             </div>
 
             <div className="h-20 w-px bg-gray-700 hidden md:block"></div>
 
             <div className="flex flex-col items-center">
-              <div className="text-sm text-gray-400 uppercase mb-1">Grade</div>
-              <div className={`text-5xl font-bold ${getGradeColor()}`}>
+              <div className="text-sm text-gray-400 uppercase mb-1">GRADE</div>
+              <div
+                className={`text-5xl font-bold ${getGradeColor()} transition-all duration-500 ease-in-out hover:scale-110 relative`}
+                style={{
+                  textShadow: "0 0 8px rgba(255,255,255,0.15)",
+                }}
+              >
                 {grade}
+                <span className="absolute -top-1 -right-1 text-xs bg-blue-500 rounded-full h-4 w-4 flex items-center justify-center animate-ping opacity-75"></span>
               </div>
             </div>
 
@@ -766,7 +962,7 @@ export default function ScamDetectionResults({
 
             <div className="mt-4 md:mt-0">
               <div className="text-sm text-gray-400 uppercase mb-2">
-                Risk Level
+                {t.riskLevel}
               </div>
               <div className="flex items-center justify-center my-3">
                 <div
@@ -786,23 +982,16 @@ export default function ScamDetectionResults({
                 {t.explainerTitle}
               </h3>
               <div className="text-sm text-gray-300 space-y-2">
-                <p>
-                  Our algorithm analyzes multiple factors to generate a
-                  trustworthiness score:
-                </p>
+                <p>{t.algorithmExplainerIntro}</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Lease analysis - identifying problematic clauses</li>
-                  <li>Price comparison with market rates</li>
-                  <li>
-                    Evaluation of payment terms and security deposit
-                    requirements
-                  </li>
-                  <li>Assessment of landlord communication patterns</li>
-                  <li>Property information verification</li>
+                  <li>{t.leaseAnalysisFactor}</li>
+                  <li>{t.priceComparisonFactor}</li>
+                  <li>{t.paymentTermsFactor}</li>
+                  <li>{t.landlordCommunicationFactor}</li>
+                  <li>{t.propertyVerificationFactor}</li>
                 </ul>
                 <p className="text-xs text-gray-400 mt-2 italic">
-                  Scores 80-100 are considered trustworthy, 50-79 require
-                  caution, and below 50 show significant warning signs.
+                  {t.scoreRangeExplanation}
                 </p>
               </div>
             </div>
@@ -820,10 +1009,10 @@ export default function ScamDetectionResults({
 
           <div className="mt-4">
             <h3 className="font-medium mb-2 text-gray-200">{t.explanation}</h3>
-            <div className="text-gray-300 bg-gray-900/30 p-4 rounded-lg border border-gray-700 leading-relaxed">
-              {/* Use displayExplanation which may use raw JSON data */}
-              {displayExplanation}
-            </div>
+            <div
+              className="text-gray-300 bg-gray-900/30 p-4 rounded-lg border border-gray-700 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: displayExplanation }}
+            ></div>
 
             <div className="mt-6">
               <button

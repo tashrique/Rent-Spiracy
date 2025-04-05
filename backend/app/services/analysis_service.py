@@ -46,7 +46,7 @@ class AnalysisService:
                     response = requests.get(request.listing_url, timeout=10)
                     property_info = {"source": "listing_url", "url": request.listing_url}
                     if response.status_code == 200:
-                        property_info["page_content"] = response.text[:5000]  # Just first 5000 chars for demo
+                        property_info["page_content"] = response.text[:5000]  # Just first 5000 chars for demo << jina ai stuff here
                 except Exception as e:
                     print(f"Error scraping listing URL: {str(e)}")
                     property_info["error"] = str(e)
@@ -86,7 +86,8 @@ class AnalysisService:
             gemini_response = await GeminiService.analyze_rental_document(
                 document_content=document_content,
                 listing_url=request.listing_url or property_info.get("found_listing"),
-                property_address=request.property_address
+                property_address=request.property_address,
+                language=request.language
             )
             
             # Ensure we get a valid response, not None
