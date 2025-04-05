@@ -2,9 +2,13 @@
  * API service for communication with the Rent-Spiracy backend
  */
 
-// Always use localhost endpoint for now
+// Use environment variables to determine the API base URL
 const getBaseUrl = (): string => {
-  return 'http://localhost:8000';
+  // Access environment variable for API URL
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  
+  // If environment variable is not set, fallback to localhost
+  return apiUrl || 'http://localhost:8000';
 };
 
 /**

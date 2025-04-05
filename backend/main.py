@@ -29,18 +29,17 @@ app = FastAPI(
 
 # Configure CORS
 origins = [
-    "http://localhost:3000",  # Frontend origin
-    "http://localhost:5173",  # Vite dev server
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-    "https://rent-spiracy.vercel.app",
-    "https://rentspiracy.tech"
+    "http://localhost:3000",  # Development frontend
+    "http://127.0.0.1:3000",  # Alternative local address
+    "https://rent-spiracy.vercel.app",  # Production frontend on Vercel
+    "https://rentspiracy.tech",  # Custom domain
+    "https://www.rentspiracy.tech",  # www subdomain
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all Vercel app deployments
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all Vercel preview deployments
     allow_credentials=False,  # Set to False since we're using 'omit' in frontend
     allow_methods=["*"],
     allow_headers=["*"],
