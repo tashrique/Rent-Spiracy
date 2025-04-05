@@ -37,28 +37,40 @@ export default function ScamDetectionForm({
 
     // Create form data to send
     const formData = new FormData();
-    if (email) formData.append("email", email);
-    if (phone) formData.append("phone", phone);
+    if (email) formData.append("landlord_email", email);
+    if (phone) formData.append("landlord_phone", phone);
     if (listingUrl) formData.append("listing_url", listingUrl);
-    if (address) formData.append("address", address);
-    if (file) formData.append("file", file);
-    formData.append("language", language);
+    if (address) formData.append("property_address", address);
+    if (file) formData.append("lease_document", file);
 
     try {
-      // In a real implementation, this would send the data to the backend
-      // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scam-detection/analyze`, {
-      //   method: 'POST',
-      //   body: formData,
-      // });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/listings/submit`, {
+        method: 'POST',
+        body: formData,
+      });
 
-      // Mock response for now
-      console.log("Form submitted with:", Object.fromEntries(formData));
-      setTimeout(() => {
-        setIsSubmitting(false);
-        if (onSubmit) onSubmit();
-      }, 1000);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail?.message || 'Failed to submit listing');
+      }
+
+      const result = await response.json();
+      console.log("Analysis result:", result);
+      
+      // Call onSubmit callback with the result
+      if (onSubmit) onSubmit();
+
+      // Clear form
+      setEmail("");
+      setPhone("");
+      setListingUrl("");
+      setAddress("");
+      setFile(null);
+      
     } catch (error) {
       console.error("Error submitting form:", error);
+      alert("Error submitting form: " + (error as Error).message);
+    } finally {
       setIsSubmitting(false);
     }
   };

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import logging
 from dotenv import load_dotenv
+from app.middleware.rate_limiter import RateLimiter
 
 # Configure logging
 logging.basicConfig(
@@ -35,11 +36,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add rate limiting middleware
+app.middleware("http")(RateLimiter(requests_per_minute=60))
+
 # Import routers if they exist
 try:
-    from app.routers import scam_detection
+    from app.routers import scam_detection, users, listings
     app.include_router(scam_detection.router)
-    logger.info("Loaded scam_detection router successfully")
+    app.include_router(users.router, prefix="/api/v1")
+    app.include_router(listings.router, prefix="/api/v1")
+    logger.info("Loaded routers successfully")
 except ImportError as e:
     logger.error(f"Failed to import routers: {str(e)}")
     # If router modules don't exist yet, create basic endpoints
