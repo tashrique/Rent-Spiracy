@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Form
 from typing import List, Optional
 from ..database import db
 from ..models.listing import RentalListing
@@ -33,13 +33,13 @@ def validate_url(url: str) -> bool:
 
 @router.post("/listings/submit", response_model=RentalListing)
 async def submit_listing(
+    background_tasks: BackgroundTasks,
     listing_url: str = Form(...),
     landlord_email: str = Form(...),
     landlord_phone: str = Form(...),
     property_address: str = Form(...),
     user_id: str = Form(...),
-    lease_document: Optional[UploadFile] = File(None),
-    background_tasks: BackgroundTasks = Depends()
+    lease_document: Optional[UploadFile] = File(None)
 ):
     """
     Submit a new listing with optional file upload
