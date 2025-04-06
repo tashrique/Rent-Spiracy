@@ -8,11 +8,24 @@ from app.models.rental import (
     CaliforniaTenantRights
 )
 
+from app.models.lawyer import (
+    Lawyer,
+    LawyerCreate,
+    LawyerUpdate,
+    LawyerFilter,
+    Region
+)
+
 __all__ = [
     "RentalAnalysisRequest",
     "AnalysisResult",
     "ClauseAnalysis",
     "Language",
     "ScamLikelihood",
-    "CaliforniaTenantRights"
+    "CaliforniaTenantRights",
+    "Lawyer",
+    "LawyerCreate",
+    "LawyerUpdate",
+    "LawyerFilter",
+    "Region"
 ]

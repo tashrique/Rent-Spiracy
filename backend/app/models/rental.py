@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Union, Dict, Any
 from datetime import datetime
 from enum import Enum
+from pydantic import validator
 
 
 class Language(str, Enum):
@@ -47,12 +48,12 @@ class RentalAnalysisRequest(BaseModel):
 
 
 class ClauseAnalysis(BaseModel):
-    """Model for clause analysis results."""
+    """A single clause analysis result."""
     text: str
     simplified_text: str
     is_concerning: bool
     reason: Optional[str] = None
-    california_law: Optional[str] = None  # California legal code references
+    legal_reference: Optional[str] = None  # Changed from california_law to be more generic
 
 
 class ScamLikelihood(str, Enum):
@@ -86,19 +87,38 @@ class CaliforniaTenantRights(BaseModel):
 
 
 class AnalysisResult(BaseModel):
-    """Model for analysis results."""
-    id: str = Field(default_factory=lambda: str(datetime.now().timestamp()))
-    scam_likelihood: ScamLikelihood
-    trustworthiness_score: int = Field(default=75, ge=0, le=100)  # 0-100 score
-    trustworthiness_grade: TrustworthinessGrade = TrustworthinessGrade.C  # A-F grade
-    risk_level: RiskLevel = RiskLevel.MEDIUM_RISK
+    """Result of a rental property analysis."""
+    id: str
+    scam_likelihood: Union[ScamLikelihood, str]
+    trustworthiness_score: Optional[int] = None
+    trustworthiness_grade: Optional[str] = None
+    risk_level: Optional[str] = None
     explanation: str
-    action_items: Optional[List[str]] = []  # Recommendations for what to do
-    simplified_clauses: List[ClauseAnalysis] = []
-    suggested_questions: List[str] = []
-    created_at: datetime = Field(default_factory=datetime.now)
-    raw_response: Optional[str] = None  # Raw response from LLM for frontend processing
-    california_tenant_rights: Optional[CaliforniaTenantRights] = None  # California tenant rights info
+    action_items: Optional[List[str]] = []
+    simplified_clauses: List[ClauseAnalysis]
+    suggested_questions: List[str]
+    created_at: Optional[datetime] = None
+    raw_response: Optional[str] = None
+    tenant_rights: Optional[Dict[str, List[str]]] = None  # Changed from california_tenant_rights
+    key_lease_terms: Optional[Dict[str, Any]] = None
+    
+    # Convert from non-Enum to Enum if needed
+    @validator('scam_likelihood', pre=True)
+    def convert_scam_likelihood(cls, v):
+        if isinstance(v, str):
+            try:
+                return ScamLikelihood[v.upper()]
+            except KeyError:
+                # Handle string values that don't match enum names
+                if v.lower() == 'low':
+                    return ScamLikelihood.LOW
+                elif v.lower() == 'medium':
+                    return ScamLikelihood.MEDIUM
+                elif v.lower() == 'high':
+                    return ScamLikelihood.HIGH
+                else:
+                    return v
+        return v
 
     class Config:
         schema_extra = {
@@ -118,7 +138,7 @@ class AnalysisResult(BaseModel):
                         "text": "Tenant shall pay a security deposit of $1000.",
                         "simplified_text": "You need to pay $1000 as a security deposit.",
                         "is_concerning": False,
-                        "california_law": "California Civil Code § 1950.5 limits security deposits to twice the monthly rent for unfurnished units."
+                        "legal_reference": "California Civil Code § 1950.5 limits security deposits to twice the monthly rent for unfurnished units."
                     }
                 ],
                 "suggested_questions": [
@@ -126,7 +146,7 @@ class AnalysisResult(BaseModel):
                     "Are utilities included in the rent?"
                 ],
                 "created_at": "2023-04-01T12:00:00",
-                "california_tenant_rights": {
+                "tenant_rights": {
                     "relevant_statutes": [
                         "California Civil Code § 1950.5 - Security Deposits: Limits security deposits to 2x monthly rent for unfurnished properties."
                     ],
