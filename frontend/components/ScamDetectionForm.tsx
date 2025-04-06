@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { scamDetectionApi, ScamDetectionResponse } from "../services/api";
 import { translations } from "../services/constants";
 
@@ -37,8 +37,8 @@ export default function ScamDetectionForm({
 }: ScamDetectionFormProps) {
   const [listingUrl, setListingUrl] = useState("");
   const [address, setAddress] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -50,22 +50,53 @@ export default function ScamDetectionForm({
     (translations[language as keyof typeof translations] as TranslationType) ||
     (translations.english as TranslationType);
 
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
 
-      // Create preview URL for images
-      if (file.type.startsWith("image/")) {
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-      } else {
-        setPreviewUrl(null);
-      }
+      const newPreviewUrls: string[] = [];
 
-      // Reset progress when a new file is selected
+      newFiles.forEach((file) => {
+        // Account for HEIC files as images despite their content type
+        const isImage =
+          file.type.startsWith("image/") ||
+          file.name.toLowerCase().endsWith(".heic") ||
+          file.name.toLowerCase().endsWith(".heif");
+
+        if (isImage) {
+          const url = URL.createObjectURL(file);
+          newPreviewUrls.push(url);
+        }
+      });
+
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+      setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
+
       setUploadProgress(0);
       setAnalysisStage(null);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => {
+      const newFiles = [...prev];
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+
+    if (previewUrls[index]) {
+      URL.revokeObjectURL(previewUrls[index]);
+      setPreviewUrls((prev) => {
+        const newUrls = [...prev];
+        newUrls.splice(index, 1);
+        return newUrls;
+      });
     }
   };
 
@@ -79,8 +110,7 @@ export default function ScamDetectionForm({
     e.preventDefault();
     setError(null);
 
-    // Validate at least one field is provided
-    if (!listingUrl && !address && !selectedFile) {
+    if (!listingUrl && !address && selectedFiles.length === 0) {
       setError(t.atLeastOneField);
       return;
     }
@@ -89,7 +119,6 @@ export default function ScamDetectionForm({
     setUploadProgress(0);
     setAnalysisStage(t.analysisStage1);
 
-    // Convert UI language to API language format
     const apiLanguage = language as
       | "english"
       | "spanish"
@@ -101,11 +130,9 @@ export default function ScamDetectionForm({
     try {
       let response;
 
-      // Simulate progress for better UX
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           const newProgress = prev + Math.random() * 15;
-          // Update stage based on progress
           if (newProgress > 25 && newProgress <= 50) {
             setAnalysisStage(t.analysisStage2);
           } else if (newProgress > 50 && newProgress <= 75) {
@@ -113,59 +140,50 @@ export default function ScamDetectionForm({
           } else if (newProgress > 75) {
             setAnalysisStage(t.analysisStage4);
           }
-          return Math.min(newProgress, 95); // Cap at 95% until complete
+          return Math.min(newProgress, 95);
         });
       }, 500);
 
-      // If a file is selected, use the file upload endpoint
-      if (selectedFile) {
-        // For PDF files, we need to use the specialized endpoint
-        const isPDF = selectedFile.name.toLowerCase().endsWith(".pdf");
-        const isImage = selectedFile.type.startsWith("image/");
-        console.log(
-          `Uploading ${isPDF ? "PDF" : isImage ? "image" : "text"} file: ${
-            selectedFile.name
-          }`
-        );
+      if (selectedFiles.length > 0) {
+        console.log(`Uploading ${selectedFiles.length} files`);
 
-        // Always use the uploadDocument method which handles both PDF and text files
-        response = await scamDetectionApi.uploadDocument(
-          selectedFile,
-          listingUrl || undefined,
-          address || undefined,
-          apiLanguage,
-          false // voice output
-        );
+        if (selectedFiles.length === 1) {
+          response = await scamDetectionApi.uploadDocument(
+            selectedFiles[0],
+            listingUrl || undefined,
+            address || undefined,
+            apiLanguage,
+            false
+          );
+        } else {
+          response = await scamDetectionApi.uploadMultipleDocuments(
+            selectedFiles,
+            listingUrl || undefined,
+            address || undefined,
+            apiLanguage,
+            false
+          );
+        }
 
         console.log("File upload response:", response);
       } else {
-        console.log("File not selected");
+        console.log("No files selected");
       }
 
-      // Clear the progress interval
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      // Check if we got a valid response
       if (!response || !response.explanation) {
         console.error("Invalid response format:", response);
         throw new Error("Received invalid response format from server");
       }
 
-      // Pass results to parent component
       onSubmit(response);
     } catch (err) {
       console.error("Error submitting form:", err);
       setError(t.errorText);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // Cleanup preview URL when component unmounts or when new file is selected
-  const cleanupPreview = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
     }
   };
 
@@ -186,11 +204,9 @@ export default function ScamDetectionForm({
         onSubmit={handleSubmit}
         className="space-y-6 bg-gray-800 p-6 rounded-lg shadow-md backdrop-blur-sm border border-gray-700 relative overflow-hidden"
       >
-        {/* Fun decoration elements */}
         <div className="absolute -top-6 -right-6 w-12 h-12 rounded-full bg-blue-500/20 blur-xl animate-float"></div>
         <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-pink-500/20 blur-xl animate-pulse-slow"></div>
 
-        {/* URL input */}
         <div className="group">
           <label
             className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
@@ -216,7 +232,6 @@ export default function ScamDetectionForm({
           </div>
         </div>
 
-        {/* Address input */}
         <div className="group">
           <label
             className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
@@ -242,54 +257,100 @@ export default function ScamDetectionForm({
           </div>
         </div>
 
-        {/* File upload */}
-        <div className="group">
-          <label
-            className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
-            htmlFor="documentFile"
-          >
-            {t.fileLabel}
-          </label>
-          <div className="relative">
-            <input
-              id="documentFile"
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept=".txt,.pdf,.doc,.docx"
-              disabled={isSubmitting}
-            />
+        <div className="space-y-4">
+          <div className="group">
             <label
-              htmlFor="documentFile"
-              className="cursor-pointer w-full p-3 border-2 border-dashed border-gray-600 rounded bg-gray-700/50 text-gray-300 hover:border-blue-500 hover:text-blue-300 transition-all flex items-center justify-center"
+              className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
+              htmlFor="file"
             >
-              <span className="mr-2 text-xl">📄</span>
-              {selectedFile && !selectedFile.type.startsWith("image/")
-                ? selectedFile.name
-                : t.fileHelp}
+              {t.fileLabel}
             </label>
+            <div className="relative">
+              <input
+                ref={fileInputRef}
+                id="file"
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".pdf,.txt,.jpg,.jpeg,.png,.heic,.heif,image/*"
+                multiple
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full text-left p-2 border border-gray-600 rounded bg-gray-700 text-gray-300 hover:border-blue-500 hover:bg-gray-600 transition-all flex items-center justify-between"
+                disabled={isSubmitting}
+              >
+                <span>
+                  {selectedFiles.length > 0
+                    ? `${selectedFiles.length} file(s) selected`
+                    : "Choose Document"}
+                </span>
+                <span className="text-blue-400">📄</span>
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              {t.fileHelp}{" "}
+              <span className="text-blue-400">
+                PDF, Text, Images (including HEIC/HEIF)
+              </span>
+            </p>
           </div>
+
+          {selectedFiles.length > 0 && (
+            <div className="mt-3 bg-gray-700/50 rounded p-2 max-h-48 overflow-y-auto">
+              <h4 className="text-xs font-medium text-gray-300 mb-2">
+                Selected Files:
+              </h4>
+              <ul className="space-y-2">
+                {selectedFiles.map((file, index) => (
+                  <li
+                    key={index}
+                    className="flex items-center justify-between text-sm text-gray-300 p-1 hover:bg-gray-600/30 rounded"
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-2">
+                        {file.type.startsWith("image/") ? "🖼️" : "📄"}
+                      </span>
+                      <span className="truncate max-w-[200px]">
+                        {file.name}
+                      </span>
+                      <span className="ml-2 text-gray-400 text-xs">
+                        ({(file.size / 1024).toFixed(1)} KB)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="text-red-400 hover:text-red-300 transition-colors ml-2"
+                      disabled={isSubmitting}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
-        {/* Photo upload options */}
         <div className="group">
           <label className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors">
             {t.photoLabel}
           </label>
           <div className="flex flex-col space-y-3">
-            {/* Hidden photo input */}
             <input
               type="file"
               accept="image/*"
               capture="environment"
               ref={photoInputRef}
               onChange={handleFileChange}
+              multiple
               className="hidden"
               disabled={isSubmitting}
             />
 
-            {/* Photo upload buttons */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -300,58 +361,63 @@ export default function ScamDetectionForm({
                 <span className="mr-2">📷</span>
                 {t.takePhotoLabel}
               </button>
-
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className="p-3 border border-gray-600 rounded bg-gray-700 text-white hover:bg-gray-600 transition-all flex items-center justify-center"
-                disabled={isSubmitting}
-              >
-                <span className="mr-2">🖼️</span>
-                {t.galleryLabel}
-              </button>
             </div>
 
-            {/* Image preview */}
-            {previewUrl && (
-              <div className="mt-3 relative">
-                <img
-                  src={previewUrl}
-                  alt="Lease document preview"
-                  className="w-full rounded border border-gray-600 object-contain max-h-48"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    cleanupPreview();
-                    setPreviewUrl(null);
-                    setSelectedFile(null);
-                  }}
-                  className="absolute top-2 right-2 bg-gray-800/70 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-500/70"
-                >
-                  ✖
-                </button>
+            {previewUrls.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {previewUrls.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={url}
+                      className="h-20 w-20 object-cover rounded shadow-md border border-gray-700"
+                      alt={`Preview ${index + 1}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md opacity-80 hover:opacity-100 transition-opacity"
+                      disabled={isSubmitting}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Submit button */}
-        <div className="pt-2">
+        <div>
+          {error && (
+            <div className="text-red-400 mb-4 p-2 bg-red-900/30 rounded border border-red-900">
+              {error}
+            </div>
+          )}
+
+          {isSubmitting && (
+            <div className="mb-4">
+              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <span>{analysisStage}</span>
+                <span>{Math.round(uploadProgress)}%</span>
+              </div>
+              <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            className={`w-full py-3 px-4 rounded font-semibold transition-colors flex items-center justify-center ${
-              isSubmitting
-                ? "bg-blue-600 text-white cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}
+            className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center justify-center"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
               <>
                 <svg
                   className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -373,45 +439,15 @@ export default function ScamDetectionForm({
               </>
             ) : (
               <>
-                <span className="mr-2">{t.submitButton}</span>
-                <span className="transform transition-transform group-hover:translate-x-1">
-                  →
-                </span>
+                <span>{t.submitButton}</span>
               </>
             )}
           </button>
+
+          <div className="text-xs text-gray-500 italic mt-4 text-center">
+            {t.legalDisclaimer}
+          </div>
         </div>
-
-        {/* Progress bar and analysis stage */}
-        {isSubmitting && (
-          <div className="mt-4 space-y-2 animate-fadeIn">
-            <div className="w-full bg-gray-700 rounded-full h-2.5">
-              <div
-                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out relative overflow-hidden"
-                style={{ width: `${uploadProgress}%` }}
-              >
-                <span className="absolute inset-0 bg-white/20 animate-pulse-slow"></span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center text-sm text-gray-300">
-              <div className="flex items-center">
-                <span className="inline-block mr-2 animate-bounce">⚡</span>
-                <span className="font-medium">{analysisStage}</span>
-              </div>
-              <span>{Math.round(uploadProgress)}%</span>
-            </div>
-          </div>
-        )}
-
-        {/* Error message */}
-        {error && (
-          <div className="text-red-400 bg-red-900/20 p-3 rounded-md border border-red-800 animate-fadeIn">
-            <div className="flex items-start">
-              <span className="mr-2 mt-0.5">⚠️</span>
-              <p>{error}</p>
-            </div>
-          </div>
-        )}
       </form>
     </div>
   );

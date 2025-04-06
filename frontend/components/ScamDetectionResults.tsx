@@ -7,6 +7,7 @@ interface Clause {
   simplified_text: string;
   is_concerning: boolean;
   reason?: string;
+  california_law?: string;
 }
 
 interface ScamDetectionResultsProps {
@@ -21,6 +22,11 @@ interface ScamDetectionResultsProps {
     simplified_clauses: Clause[];
     suggested_questions: string[];
     raw_response?: string;
+    california_tenant_rights?: {
+      relevant_statutes: string[];
+      local_ordinances: string[];
+      case_law: string[];
+    };
   };
   onBack: () => void;
 }
@@ -335,7 +341,7 @@ export default function ScamDetectionResults({
       emailQuestions: "इन प्रश्नों को ईमेल करें",
       noSavedQuestionsYet: "संदर्भ के लिए महत्वपूर्ण प्रश्न सहेजें",
       legalDisclaimerText:
-        "यह टूल एक कानूनी दस्तावेज़ नहीं है और कानूनी सलाह नहीं देता है। एस्ट शुधुं जानकारीप्रदान के लिए है।",
+        "यह टूल एक कानूनी दस्तावेज़ नहीं है और कानूनी सलाउट नहीं देता है। एस्ट शुधुं जानकारीप्रदान के लिए है।",
       highConcernClause: "उच्च जोखिम",
       moderateConcernClause: "मध्यम जोखिम",
       detailedAnalysisDesc:
@@ -448,7 +454,7 @@ export default function ScamDetectionResults({
       highConcernClause: "উচ্চ ঝুঁকি",
       moderateConcernClause: "মাঝারি ঝুঁকি",
       detailedAnalysisDesc:
-        "এই বিস্তারিত বিশ্লেষণটি আপনার কিরায় সম্পন্ন ফাইলের বিশ্বাসযোগ্যতা এবং সম্ভাব্য জোখিমগুলি আকলন করেছে।",
+        "এই বিস্তারিত বিশ্লষণটি আপনার কিরায় সম্পন্ন ফাইলের বিশ্বাসযোগ্যতা এবং সম্ভাব্য জোখিমগুলি আকলন করেছে।",
       grade: "গ্রেড",
       riskLevel: "জোখিমের স্তর",
       algorithmExplainerIntro:
@@ -594,7 +600,16 @@ export default function ScamDetectionResults({
     return highlightedText;
   };
 
-  // And now modify the formatExplanation function to use this highlighting
+  // Add the unescapeText utility function at the top of the component
+  const unescapeText = (text: string): string => {
+    if (!text) return "";
+    return text
+      .replace(/\\'/g, "'")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+  };
+
+  // Update the formatExplanation function to use unescapeText
   const formatExplanation = (explanation: string): string => {
     if (!explanation) return "";
 
@@ -602,10 +617,7 @@ export default function ScamDetectionResults({
     let formattedText = explanation.replace(/\n{3,}/g, "\n\n");
 
     // Remove escaped backslashes that appear in the text
-    formattedText = formattedText
-      .replace(/\\'/g, "'")
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, "\\");
+    formattedText = unescapeText(formattedText);
 
     // Add paragraph breaks
     formattedText = formattedText
@@ -648,153 +660,6 @@ export default function ScamDetectionResults({
   // Get raw data if available
   const rawData = parseRawResponse();
 
-  // Use raw data for clauses if available and not overridden by simplified_clauses
-  const displayClauses = useMemo(() => {
-    if (results.simplified_clauses && results.simplified_clauses.length > 0) {
-      return results.simplified_clauses;
-    }
-
-    if (rawData && (rawData.concerning_clauses || rawData.clauses)) {
-      const rawClauses = rawData.concerning_clauses || rawData.clauses || [];
-      // Use an interface instead of any
-      interface RawClause {
-        original_text?: string;
-        text?: string;
-        simplified_text?: string;
-        is_concerning?: boolean;
-        reason?: string;
-      }
-      return rawClauses.map((clause: RawClause) => ({
-        text: clause.original_text || clause.text || "",
-        simplified_text: clause.simplified_text || "",
-        is_concerning:
-          clause.is_concerning !== undefined ? clause.is_concerning : true,
-        reason: clause.reason || "",
-      }));
-    }
-
-    // If no clauses available, generate default ones based on risk level
-    if (results.risk_level && results.simplified_clauses.length === 0) {
-      // Create default clauses based on risk level
-      const defaultClauses = [];
-
-      if (
-        results.risk_level === "High Risk" ||
-        results.risk_level === "Very High Risk"
-      ) {
-        // High risk - mix of concerning and normal clauses, mostly concerning
-        defaultClauses.push({
-          text: "Tenant shall pay a non-refundable application fee of $500 via wire transfer within 24 hours of submitting application.",
-          simplified_text:
-            "You must pay a $500 non-refundable application fee through wire transfer within 1 day of applying.",
-          is_concerning: true,
-          reason:
-            "Unusually high application fee and the requirement for wire transfer are red flags.",
-        });
-        defaultClauses.push({
-          text: "Landlord may enter premises at any time without prior notice for inspection or maintenance purposes.",
-          simplified_text:
-            "The landlord can enter your home anytime without telling you first.",
-          is_concerning: true,
-          reason:
-            "This violates standard tenant rights to reasonable notice before entry.",
-        });
-        defaultClauses.push({
-          text: "Late payment of rent shall incur a fee of 15% of monthly rent plus $50 per day until paid in full.",
-          simplified_text:
-            "If your rent is late, you'll be charged 15% of your monthly rent plus $50 for each day it remains unpaid.",
-          is_concerning: true,
-          reason:
-            "These late fees are excessive and may violate laws in many jurisdictions that limit late fees.",
-        });
-        defaultClauses.push({
-          text: "The premises shall be used solely as a residence for Tenant(s) named herein.",
-          simplified_text:
-            "Only the people named in this lease can live in the rental unit.",
-          is_concerning: false,
-        });
-        defaultClauses.push({
-          text: "Tenant shall maintain the Premises in a clean and sanitary condition.",
-          simplified_text:
-            "You must keep the property clean and in good condition.",
-          is_concerning: false,
-        });
-      } else if (results.risk_level === "Medium Risk") {
-        // Medium risk - mix of concerning and normal clauses, more balanced
-        defaultClauses.push({
-          text: "Late payment of rent shall incur a fee of 10% of monthly rent.",
-          simplified_text:
-            "If your rent is late, you'll be charged 10% of your monthly rent as a late fee.",
-          is_concerning: true,
-          reason:
-            "This late fee is somewhat high but may be legal depending on your jurisdiction.",
-        });
-        defaultClauses.push({
-          text: "Landlord may enter the premises with 12 hours notice for inspection or repairs.",
-          simplified_text:
-            "The landlord can enter your home with 12 hours advance notice.",
-          is_concerning: true,
-          reason:
-            "While some notice is provided, many jurisdictions require 24-48 hours notice for landlord entry.",
-        });
-        defaultClauses.push({
-          text: "Security deposit shall be equal to one and a half month's rent.",
-          simplified_text:
-            "Your security deposit is one and a half times your monthly rent amount.",
-          is_concerning: false,
-        });
-        defaultClauses.push({
-          text: "The premises shall be used solely as a residence for Tenant(s) named herein.",
-          simplified_text:
-            "Only the people named in this lease can live in the rental unit.",
-          is_concerning: false,
-        });
-        defaultClauses.push({
-          text: "Tenant shall maintain the Premises in a clean and sanitary condition.",
-          simplified_text:
-            "You must keep the property clean and in good condition.",
-          is_concerning: false,
-        });
-      } else {
-        // Low risk - mostly normal clauses with perhaps one minor concern
-        defaultClauses.push({
-          text: "Late payment of rent shall incur a fee of $50 if not received by the 5th day of the month.",
-          simplified_text:
-            "If your rent is late (after the 5th), you'll be charged a $50 late fee.",
-          is_concerning: false,
-        });
-        defaultClauses.push({
-          text: "Landlord shall have the right to enter the premises after providing at least 24 hours' notice.",
-          simplified_text:
-            "The landlord can enter your home with 24 hours advance notice.",
-          is_concerning: false,
-        });
-        defaultClauses.push({
-          text: "Security deposit shall be equal to one month's rent.",
-          simplified_text:
-            "Your security deposit is the same amount as one month's rent.",
-          is_concerning: false,
-        });
-        defaultClauses.push({
-          text: "The premises shall be used solely as a residence for Tenant(s) named herein.",
-          simplified_text:
-            "Only the people named in this lease can live in the rental unit.",
-          is_concerning: false,
-        });
-        defaultClauses.push({
-          text: "Alterations may not be made without landlord's written consent.",
-          simplified_text:
-            "You need the landlord's permission in writing before making changes to the property.",
-          is_concerning: false,
-        });
-      }
-
-      return defaultClauses;
-    }
-
-    return results.simplified_clauses;
-  }, [results.simplified_clauses, rawData, results.risk_level]);
-
   // Use raw data for questions if available
   const displayQuestions = useMemo(() => {
     if (
@@ -820,42 +685,12 @@ export default function ScamDetectionResults({
   // Get explanation from raw data if available
   const displayExplanation = useMemo(() => {
     if (rawData && rawData.explanation && rawData.explanation.length > 20) {
-      return rawData.explanation;
+      // Apply unescapeText and then formatExplanation to ensure raw explanation is also properly unescaped
+      return formatExplanation(unescapeText(rawData.explanation));
     }
 
     return formatExplanation(results.explanation);
   }, [results.explanation, rawData]);
-
-  // Function to determine clause concern level and styling
-  const getClauseConcernLevel = (clause: Clause) => {
-    if (!clause.is_concerning) {
-      return {
-        label: t.normalClause,
-        icon: "👍",
-        className: "bg-green-800 text-green-100",
-      };
-    }
-
-    // Check if it's a high concern or moderate concern based on content
-    if (
-      clause.text.includes("wire transfer") ||
-      clause.text.includes("without prior notice") ||
-      clause.text.includes("assumes full responsibility") ||
-      clause.text.match(/\b15%\b/)
-    ) {
-      return {
-        label: t.highConcernClause || "High Concern",
-        icon: "⚠️",
-        className: "bg-red-800 text-red-100",
-      };
-    } else {
-      return {
-        label: t.moderateConcernClause || "Moderate Concern",
-        icon: "⚠",
-        className: "bg-yellow-700 text-yellow-100",
-      };
-    }
-  };
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
@@ -1032,7 +867,7 @@ export default function ScamDetectionResults({
                   {/* Use displayActionItems which may use raw JSON data */}
                   <ul className="space-y-2 text-gray-300 leading-relaxed list-disc pl-5">
                     {displayActionItems.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
+                      <li key={i}>{unescapeText(item)}</li>
                     ))}
                   </ul>
                 </div>
@@ -1041,75 +876,115 @@ export default function ScamDetectionResults({
           </div>
         </div>
 
-        {/* Lease Clauses Analysis */}
-        {displayClauses.length > 0 && (
-          <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700 relative overflow-hidden group hover:border-blue-500 transition-colors duration-300">
-            <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-purple-500/20 blur-xl animate-float"></div>
+        {/* Clauses analysis section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4 text-white flex items-center">
+            <span className="mr-2">📋</span> {t.clausesSummary}
+          </h2>
 
-            <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
-              {t.clausesSummary}
-              <span className="animate-float inline-block">📋</span>
-              <span className="ml-auto text-sm text-gray-400">
-                {displayClauses.filter((c: Clause) => c.is_concerning).length}{" "}
-                concerning / {displayClauses.length} total
-              </span>
-            </h2>
-            <div className="space-y-4">
-              {displayClauses.map((clause: Clause, index: number) => (
-                <div
-                  key={index}
-                  className="border-b border-gray-700 pb-4 last:border-0 last:pb-0 hover:bg-gray-800/50 p-3 rounded-md transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium transform transition-all hover:scale-105 ${
-                        getClauseConcernLevel(clause).className
-                      }`}
-                    >
-                      <span className="flex items-center gap-1">
-                        {getClauseConcernLevel(clause).label}{" "}
-                        <span
-                          className={
-                            clause.is_concerning ? "animate-pulse-slow" : ""
-                          }
+          {results.simplified_clauses.length > 0 ? (
+            <div className="space-y-3">
+              {/* Add a "Normal Terms" section for non-concerning clauses */}
+              {results.simplified_clauses.filter((c) => !c.is_concerning)
+                .length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-md font-semibold mb-2 text-green-400">
+                    Standard/Expected Terms
+                  </h3>
+                  <div className="space-y-2">
+                    {results.simplified_clauses
+                      .filter((c) => !c.is_concerning)
+                      .map((clause, idx) => (
+                        <div
+                          key={`normal-clause-${idx}`}
+                          className="bg-gray-800/70 p-3 rounded-lg border border-gray-700 hover:border-green-500 transition-all"
                         >
-                          {getClauseConcernLevel(clause).icon}
-                        </span>
-                      </span>
-                    </span>
-
-                    <button
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                      onClick={() => toggleClauseExpansion(index)}
-                    >
-                      {expandedClause === index
-                        ? t.hideClauseDetail
-                        : t.viewClauseDetail}
-                    </button>
+                          <div className="flex items-start gap-2">
+                            <div className="mt-1 text-green-400">✓</div>
+                            <div>
+                              <p className="text-gray-300 font-medium">
+                                {unescapeText(clause.text)}
+                              </p>
+                              <p className="text-gray-400 text-sm mt-1">
+                                {unescapeText(clause.simplified_text)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                   </div>
-
-                  {expandedClause === index ? (
-                    <div className="animate-bounceIn">
-                      <p className="text-sm text-gray-400 mb-2 italic">
-                        {clause.text}
-                      </p>
-                      <p className="text-gray-200 mb-2">
-                        {clause.simplified_text}
-                      </p>
-                      {clause.is_concerning && clause.reason && (
-                        <p className="mt-2 text-sm text-red-400 bg-red-900/20 p-2 rounded">
-                          {clause.reason}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-200">{clause.simplified_text}</p>
-                  )}
                 </div>
-              ))}
+              )}
+
+              {/* Concerning clauses section */}
+              {results.simplified_clauses.filter((c) => c.is_concerning)
+                .length > 0 && (
+                <div>
+                  <h3 className="text-md font-semibold mb-2 text-yellow-400">
+                    Clauses to Review
+                  </h3>
+                  <div className="space-y-2">
+                    {results.simplified_clauses
+                      .filter((c) => c.is_concerning)
+                      .map((clause, idx) => (
+                        <div
+                          key={`clause-${idx}`}
+                          className={`bg-gray-800/70 p-3 rounded-lg border border-gray-700 ${
+                            expandedClause === idx
+                              ? "border-yellow-500"
+                              : "hover:border-gray-500"
+                          } transition-all`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="mt-1 text-yellow-400">⚠️</div>
+                            <div>
+                              <p className="text-gray-300 font-medium">
+                                {unescapeText(clause.simplified_text)}
+                              </p>
+                              <div
+                                className={`overflow-hidden transition-all ${
+                                  expandedClause === idx
+                                    ? "max-h-96 opacity-100 mt-3"
+                                    : "max-h-0 opacity-0"
+                                }`}
+                              >
+                                <p className="text-gray-300 text-sm">
+                                  {unescapeText(clause.text)}
+                                </p>
+                                {clause.reason && (
+                                  <p className="text-yellow-400 text-sm mt-1 italic">
+                                    {unescapeText(clause.reason)}
+                                  </p>
+                                )}
+                                {clause.california_law && (
+                                  <p className="text-emerald-400 text-sm mt-2 border-t border-gray-700 pt-2">
+                                    <span className="font-semibold">
+                                      California Law:
+                                    </span>{" "}
+                                    {unescapeText(clause.california_law)}
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                className="text-blue-400 text-xs mt-2 hover:underline"
+                                onClick={() => toggleClauseExpansion(idx)}
+                              >
+                                {expandedClause === idx
+                                  ? t.hideClauseDetail
+                                  : t.viewClauseDetail}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-gray-400">No specific clauses were analyzed.</p>
+          )}
+        </div>
 
         {/* Suggested Questions */}
         {displayQuestions.length > 0 && (
@@ -1155,7 +1030,7 @@ export default function ScamDetectionResults({
                   className="text-gray-300 flex items-start gap-2 p-2 hover:bg-gray-700/30 rounded transition-all transform hover:translate-x-1 group/item"
                 >
                   <span className="text-blue-400 mt-1">→</span>
-                  <span className="flex-1">{question}</span>
+                  <span className="flex-1">{unescapeText(question)}</span>
                   <button
                     onClick={() => toggleSaveQuestion(question)}
                     className={`opacity-0 group-hover/item:opacity-100 transition-opacity px-2 py-0.5 rounded text-xs ${
@@ -1190,7 +1065,7 @@ export default function ScamDetectionResults({
                         className="flex justify-between items-start group"
                       >
                         <span className="text-gray-300 text-sm">
-                          {i + 1}. {q}
+                          {i + 1}. {unescapeText(q)}
                         </span>
                         <button
                           onClick={() => toggleSaveQuestion(q)}
@@ -1210,6 +1085,83 @@ export default function ScamDetectionResults({
             </div>
           </div>
         )}
+
+        {/* Add California Tenant Rights section */}
+        {results.california_tenant_rights &&
+          (results.california_tenant_rights.relevant_statutes?.length > 0 ||
+            results.california_tenant_rights.local_ordinances?.length > 0 ||
+            results.california_tenant_rights.case_law?.length > 0) && (
+            <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700 relative overflow-hidden group hover:border-blue-500 transition-colors duration-300 mb-8">
+              <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-emerald-500/20 blur-xl animate-pulse-slow"></div>
+
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+                California Tenant Rights
+                <span className="animate-float inline-block">📜</span>
+              </h2>
+
+              {results.california_tenant_rights.relevant_statutes?.length >
+                0 && (
+                <div className="mb-4">
+                  <h3 className="text-md font-semibold text-emerald-400 mb-2">
+                    Relevant California Statutes
+                  </h3>
+                  <ul className="space-y-2 pl-2">
+                    {results.california_tenant_rights.relevant_statutes.map(
+                      (statute, idx) => (
+                        <li
+                          key={idx}
+                          className="text-gray-300 bg-gray-900/30 p-3 rounded border border-gray-700"
+                        >
+                          {unescapeText(statute)}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {results.california_tenant_rights.local_ordinances?.length >
+                0 && (
+                <div className="mb-4">
+                  <h3 className="text-md font-semibold text-emerald-400 mb-2">
+                    Local Ordinances
+                  </h3>
+                  <ul className="space-y-2 pl-2">
+                    {results.california_tenant_rights.local_ordinances.map(
+                      (ordinance, idx) => (
+                        <li
+                          key={idx}
+                          className="text-gray-300 bg-gray-900/30 p-3 rounded border border-gray-700"
+                        >
+                          {unescapeText(ordinance)}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {results.california_tenant_rights.case_law?.length > 0 && (
+                <div>
+                  <h3 className="text-md font-semibold text-emerald-400 mb-2">
+                    Relevant Case Law
+                  </h3>
+                  <ul className="space-y-2 pl-2">
+                    {results.california_tenant_rights.case_law.map(
+                      (case_law, idx) => (
+                        <li
+                          key={idx}
+                          className="text-gray-300 bg-gray-900/30 p-3 rounded border border-gray-700"
+                        >
+                          {unescapeText(case_law)}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Legal Disclaimer */}
         <div className="text-xs text-gray-500 italic bg-gray-800/50 p-3 rounded border border-gray-700 text-center">

@@ -216,44 +216,46 @@ class AnalysisService:
     @staticmethod
     def _calculate_trustworthiness(scam_likelihood: str, concerning_clauses_count: int) -> tuple:
         """Calculate trustworthiness score, grade, and risk level based on analysis."""
-        # Base score based on scam likelihood
+        # Base score based on scam likelihood - MORE GENEROUS STARTING POINTS
         base_score = {
-            "LOW": 85,
-            "MEDIUM": 60,
-            "HIGH": 30
-        }.get(scam_likelihood, 50)
+            "LOW": 90,    # Increased from 85
+            "MEDIUM": 70, # Increased from 60
+            "HIGH": 40    # Increased from 30
+        }.get(scam_likelihood, 60)  # Default is more generous too (was 50)
         
-        # Adjust score based on concerning clauses
+        # Adjust score based on concerning clauses - LESS SEVERE PENALTIES
         if concerning_clauses_count == 0:
             adjustment = 10  # Bonus for no concerning clauses
-        elif concerning_clauses_count <= 2:
+        elif concerning_clauses_count == 1:
+            adjustment = 0   # Single concern is normal, no penalty
+        elif concerning_clauses_count <= 3:
             adjustment = -5  # Minor concerns
-        elif concerning_clauses_count <= 5:
-            adjustment = -15  # Moderate concerns
+        elif concerning_clauses_count <= 6:
+            adjustment = -10 # Moderate concerns (was -15)
         else:
-            adjustment = -25  # Serious concerns
+            adjustment = -20 # Serious concerns (was -25)
             
         # Calculate final score (keeping within 0-100 range)
         score = max(0, min(100, base_score + adjustment))
         
-        # Determine grade based on score
-        if score >= 90:
+        # Determine grade based on score - MORE RELAXED GRADING
+        if score >= 85:      # Was 90
             grade = TrustworthinessGrade.A
-        elif score >= 80:
+        elif score >= 75:    # Was 80
             grade = TrustworthinessGrade.B
-        elif score >= 60:
+        elif score >= 55:    # Was 60
             grade = TrustworthinessGrade.C
-        elif score >= 40:
+        elif score >= 35:    # Was 40
             grade = TrustworthinessGrade.D
         else:
             grade = TrustworthinessGrade.F
             
-        # Determine risk level
-        if score >= 80:
+        # Determine risk level - MORE RELAXED RISK ASSESSMENT
+        if score >= 75:      # Was 80
             risk_level = RiskLevel.LOW_RISK
-        elif score >= 60:
+        elif score >= 55:    # Was 60
             risk_level = RiskLevel.MEDIUM_RISK
-        elif score >= 30:
+        elif score >= 25:    # Was 30
             risk_level = RiskLevel.HIGH_RISK
         else:
             risk_level = RiskLevel.VERY_HIGH_RISK
@@ -974,44 +976,46 @@ Landlord: ______________________ Date: ________"""
     @staticmethod
     def _calculate_trustworthiness(scam_likelihood: str, concerning_clauses_count: int) -> tuple:
         """Calculate trustworthiness score, grade, and risk level based on analysis."""
-        # Base score based on scam likelihood
+        # Base score based on scam likelihood - MORE GENEROUS STARTING POINTS
         base_score = {
-            "LOW": 85,
-            "MEDIUM": 60,
-            "HIGH": 30
-        }.get(scam_likelihood, 50)
+            "LOW": 90,    # Increased from 85
+            "MEDIUM": 70, # Increased from 60
+            "HIGH": 40    # Increased from 30
+        }.get(scam_likelihood, 60)  # Default is more generous too (was 50)
         
-        # Adjust score based on concerning clauses
+        # Adjust score based on concerning clauses - LESS SEVERE PENALTIES
         if concerning_clauses_count == 0:
             adjustment = 10  # Bonus for no concerning clauses
-        elif concerning_clauses_count <= 2:
+        elif concerning_clauses_count == 1:
+            adjustment = 0   # Single concern is normal, no penalty
+        elif concerning_clauses_count <= 3:
             adjustment = -5  # Minor concerns
-        elif concerning_clauses_count <= 5:
-            adjustment = -15  # Moderate concerns
+        elif concerning_clauses_count <= 6:
+            adjustment = -10 # Moderate concerns (was -15)
         else:
-            adjustment = -25  # Serious concerns
+            adjustment = -20 # Serious concerns (was -25)
             
         # Calculate final score (keeping within 0-100 range)
         score = max(0, min(100, base_score + adjustment))
         
-        # Determine grade based on score
-        if score >= 90:
+        # Determine grade based on score - MORE RELAXED GRADING
+        if score >= 85:      # Was 90
             grade = TrustworthinessGrade.A
-        elif score >= 80:
+        elif score >= 75:    # Was 80
             grade = TrustworthinessGrade.B
-        elif score >= 60:
+        elif score >= 55:    # Was 60
             grade = TrustworthinessGrade.C
-        elif score >= 40:
+        elif score >= 35:    # Was 40
             grade = TrustworthinessGrade.D
         else:
             grade = TrustworthinessGrade.F
             
-        # Determine risk level
-        if score >= 80:
+        # Determine risk level - MORE RELAXED RISK ASSESSMENT
+        if score >= 75:      # Was 80
             risk_level = RiskLevel.LOW_RISK
-        elif score >= 60:
+        elif score >= 55:    # Was 60
             risk_level = RiskLevel.MEDIUM_RISK
-        elif score >= 30:
+        elif score >= 25:    # Was 30
             risk_level = RiskLevel.HIGH_RISK
         else:
             risk_level = RiskLevel.VERY_HIGH_RISK

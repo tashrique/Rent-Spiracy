@@ -4,7 +4,8 @@ from app.models.rental import (
     AnalysisResult,
     ClauseAnalysis,
     Language,
-    ScamLikelihood
+    ScamLikelihood,
+    CaliforniaTenantRights
 )
 
 __all__ = [
@@ -12,5 +13,6 @@ __all__ = [
     "AnalysisResult",
     "ClauseAnalysis",
     "Language",
-    "ScamLikelihood"
+    "ScamLikelihood",
+    "CaliforniaTenantRights"
 ]

@@ -141,7 +141,8 @@ class GeminiService:
                             "original_text": clause.get('original_text', ''),
                             "simplified_text": clause.get('simplified_text', ''),
                             "is_concerning": clause.get('is_concerning', True),
-                            "reason": clause.get('reason', '')
+                            "reason": clause.get('reason', ''),
+                            "california_law": clause.get('california_law', '')
                         }
                         
                         # Skip if missing key info
@@ -167,7 +168,8 @@ class GeminiService:
                     "action_items": parsed_data.get('action_items', []),
                     "trustworthiness_score": trustworthiness_score,
                     "trustworthiness_grade": trustworthiness_grade.value,
-                    "risk_level": risk_level.value
+                    "risk_level": risk_level.value,
+                    "california_tenant_rights": parsed_data.get('california_tenant_rights', {})
                 }
                 
             # If JSON extraction failed, try to parse using regex/NLP techniques
@@ -199,7 +201,8 @@ class GeminiService:
                 "action_items": action_items,
                 "trustworthiness_score": trustworthiness_score, 
                 "trustworthiness_grade": trustworthiness_grade.value,
-                "risk_level": risk_level.value
+                "risk_level": risk_level.value,
+                "california_tenant_rights": {}
             }
         
         except Exception as e:
@@ -214,7 +217,8 @@ class GeminiService:
                 "action_items": [],
                 "trustworthiness_score": 50,
                 "trustworthiness_grade": TrustworthinessGrade.C.value,
-                "risk_level": RiskLevel.MEDIUM_RISK.value
+                "risk_level": RiskLevel.MEDIUM_RISK.value,
+                "california_tenant_rights": {}
             }
     
     @staticmethod
@@ -311,7 +315,8 @@ class GeminiService:
                                     "original_text": original_match.group(1).replace('\\"', '"'),
                                     "simplified_text": simplified_match.group(1).replace('\\"', '"'),
                                     "is_concerning": True,
-                                    "reason": "Extracted from analysis"
+                                    "reason": "Extracted from analysis",
+                                    "california_law": ""
                                 })
                     
                     # Extract questions array
@@ -336,7 +341,8 @@ class GeminiService:
                         "explanation": explanation,
                         "concerning_clauses": clauses,
                         "suggested_questions": questions,
-                        "action_items": actions
+                        "action_items": actions,
+                        "california_tenant_rights": {}
                     }
                 except Exception as regex_error:
                     logger.warning(f"Error in regex-based extraction: {regex_error}")
@@ -462,7 +468,8 @@ class GeminiService:
                         "original_text": original,
                         "simplified_text": simplified,
                         "is_concerning": True,
-                        "reason": "Identified as concerning in analysis"
+                        "reason": "Identified as concerning in analysis",
+                        "california_law": ""
                     })
             
             # If still no clauses, try another approach with quotes
@@ -477,7 +484,8 @@ class GeminiService:
                             "original_text": original.strip(),
                             "simplified_text": explanation.strip(),
                             "is_concerning": True,
-                            "reason": "Identified as concerning in analysis"
+                            "reason": "Identified as concerning in analysis",
+                            "california_law": ""
                         })
         
         # If we couldn't find any clauses, check for generic red flags in the text
@@ -500,7 +508,8 @@ class GeminiService:
                         "original_text": f"Red Flag {i+1}",
                         "simplified_text": flag,
                         "is_concerning": True,
-                        "reason": "Identified as a red flag in analysis"
+                        "reason": "Identified as a red flag in analysis",
+                        "california_law": ""
                     })
         
         return concerning_clauses
@@ -610,7 +619,7 @@ class GeminiService:
         print(f"Generating prompt with language: {language}")
         
         prompt_parts = [
-            f"You are an experienced legal expert specializing in rental agreements and lease documents. Your task is to analyze the provided lease document in EXTREME DETAIL to identify potential scams, concerning clauses, tenant rights issues, and any other problematic elements. Your entire analysis MUST be written in {language.upper()}. Do NOT provide any analysis in English unless {language.upper()} is English.",
+            f"You are an experienced legal expert specializing in rental agreements and lease documents with deep knowledge of California landlord-tenant law. Your task is to analyze the provided lease document in EXTREME DETAIL to identify potential scams, concerning clauses, tenant rights issues, and any other problematic elements. Your entire analysis MUST be written in {language.upper()}. Do NOT provide any analysis in English unless {language.upper()} is English.",
             
             f"First, determine if this is actually a lease agreement. Be VERY CAREFUL with this determination - only classify as 'not a lease' if the document is clearly something else like a tax form, bank statement, or random text. A basic or template lease should still be identified as a lease agreement, even if it's incomplete. If it has sections about rent, security deposit, tenant obligations, etc., it is likely a lease. If it's not a lease agreement, explicitly state this is NOT a lease agreement, explain what it appears to be, and why this indicates a potential scam. This explanation MUST be in {language.upper()}.",
             
@@ -621,10 +630,17 @@ class GeminiService:
             f"\n   - The exact text from the lease"
             f"\n   - A simplified explanation in plain language"
             f"\n   - Why this clause is concerning or problematic"
-            f"\n   - Whether it might be illegal or unenforceable in most jurisdictions"
+            f"\n   - Whether it might be illegal or unenforceable under California law"
+            f"\n   - SPECIFIC California legal code references (e.g., Civil Code Section 1950.5 for security deposits, etc.)"
+            f"\n   - Direct quotes from relevant California statutes when applicable"
             f"\n   - Specific recommendations for the tenant regarding this clause"
             f"\n4. At least 6-8 specific questions the tenant should ask before signing, with explanations of why each question is important"
             f"\n5. Actionable recommendations - specific actions the tenant should take based on your analysis"
+            f"\n6. A special section on California tenant rights that includes:"
+            f"\n   - Relevant California Civil Code sections that apply to this lease"
+            f"\n   - Local ordinances that might affect tenant rights (e.g., rent control in SF, LA, etc.)"
+            f"\n   - Citations to specific case law where relevant"
+            f"\n   - The exact text of the most important California statutes related to identified issues"
 
 
             f"\nIMPORTANT: EVERY SINGLE WORD of your analysis MUST be written in {language.upper()}. DO NOT use English at all unless {language.upper()} is English."
@@ -647,6 +663,77 @@ class GeminiService:
         else:
             prompt_parts.append("\n\nNote: No lease document was provided.")
         
+        # Add California law references to consider
+        ca_laws = f"""
+\n\nKey California landlord-tenant laws to consider in your analysis (incorporate specific references and sections in your analysis):
+
+1. Security Deposits (Civil Code §§ 1950.5, 1940.5(g)):
+   - Limits on security deposit amounts (2x monthly rent for unfurnished, 3x for furnished)
+   - Requirements for returning deposits (21 days after move-out)
+   - Itemized statement of deductions required
+   - Interest payments on security deposits where required by local ordinance
+
+2. Habitability (Civil Code § 1941.1):
+   - Warranty of habitability requirements
+   - Landlord's duty to repair and maintain premises 
+   - Tenant's remedies for uninhabitable conditions
+
+3. Entry and Privacy (Civil Code § 1954):
+   - 24-hour written notice required except for emergencies
+   - Entry limited to business hours except by agreement
+   - Specific permissible reasons for entry
+
+4. Rent Control (where applicable):
+   - Costa-Hawkins Rental Housing Act (Civil Code §§ 1954.50-1954.535)
+   - Tenant Protection Act of 2019 (AB 1482) - Statewide rent caps and just-cause eviction
+   - Local ordinances in cities like San Francisco, Los Angeles, Oakland, Berkeley, etc.
+
+5. Discrimination (Fair Employment and Housing Act, Government Code § 12955):
+   - Protected classes under California law
+   - Requirements for accommodations and modifications
+
+6. Eviction Procedures (Code of Civil Procedure §§ 1161, 1179.01-1179.07):
+   - Notice requirements
+   - Just cause requirements
+   - COVID-19 protections where applicable
+
+7. Rent Payment (Civil Code § 1947):
+   - Grace periods
+   - Late fees (must be reasonable liquidated damages)
+   - Electronic payment requirements
+
+8. Right to Repair and Deduct (Civil Code § 1942):
+   - Tenant's right to repair and deduct from rent
+   - Limitations and requirements
+
+9. Retaliation Protections (Civil Code § 1942.5):
+   - Protection from landlord retaliation for exercising legal rights
+   - Remedies for retaliatory actions
+
+10. Bed Bug Notifications (Civil Code § 1954.603):
+    - Required disclosures
+    - Inspection and treatment requirements
+
+11. Utilities (Civil Code §§ 1940.9, 1941.1):
+    - Requirements for separate metering
+    - Landlord's obligations regarding essential utilities
+
+12. Early Termination (Civil Code § 1946.7):
+    - Domestic violence protections
+    - Military service protections
+
+13. Fee Limitations:
+    - Limitations on application fees (Civil Code § 1950.6)
+    - Screening fee limitations and requirements
+
+14. Tenant's Right to Organize (Civil Code § 1942.6):
+    - Right to organize tenant associations
+    - Protection from retaliation
+
+IMPORTANT: Always cite the specific code section numbers and include the exact statutory language when analyzing lease provisions.
+"""
+        prompt_parts.append(ca_laws)
+        
         # Request structured JSON output
         json_format_instructions = f"""
 \n\nPlease return your analysis in the following JSON format, COMPLETELY IN {language.upper()}, wrapped in triple backticks:
@@ -659,13 +746,15 @@ class GeminiService:
 \n      "original_text": "Exact clause text from document...",
 \n      "simplified_text": "Simplified explanation in {language.upper()}...",
 \n      "is_concerning": true,
-\n      "reason": "Detailed explanation of why this clause is concerning, potentially illegal, or unfair... MUST BE IN {language.upper()}"
+\n      "reason": "Detailed explanation of why this clause is concerning, potentially illegal, or unfair... MUST BE IN {language.upper()}",
+\n      "california_law": "Specific California Civil Code references with section numbers and direct quotes from the statutes... MUST BE IN {language.upper()}"
 \n    }},
 \n    {{
 \n      "original_text": "Another concerning clause...",
 \n      "simplified_text": "Plain language explanation in {language.upper()}...",
 \n      "is_concerning": true,
-\n      "reason": "Explanation of the issue with this clause... MUST BE IN {language.upper()}"
+\n      "reason": "Explanation of the issue with this clause... MUST BE IN {language.upper()}",
+\n      "california_law": "Specific California Civil Code references with section numbers and direct quotes from the statutes... MUST BE IN {language.upper()}"
 \n    }}
 \n  ],
 \n  "suggested_questions": [
@@ -682,7 +771,22 @@ class GeminiService:
 \n    "Specific action the tenant should take, like 'Request written clarification about clause X' IN {language.upper()}",
 \n    "Another action recommendation, like 'Verify the landlord is the actual property owner' IN {language.upper()}",
 \n    "A third action recommendation, like 'Consult with a tenant rights attorney about clause Y' IN {language.upper()}"
-\n  ]
+\n  ],
+\n  "california_tenant_rights": {{
+\n    "relevant_statutes": [
+\n      "California Civil Code § 1950.5 - Security Deposits: [quote exact statute text]",
+\n      "California Civil Code § 1941.1 - Implied Warranty of Habitability: [quote exact statute text]",
+\n      "Additional relevant statute with section number and text..."
+\n    ],
+\n    "local_ordinances": [
+\n      "Any relevant local ordinances that might apply based on property location",
+\n      "Rent control or just-cause eviction ordinances if applicable" 
+\n    ],
+\n    "case_law": [
+\n      "Relevant California cases that interpret these statutes",
+\n      "Precedent that affects how these laws are applied"
+\n    ]
+\n  }}
 \n}}
 \n```
 """
@@ -745,44 +849,46 @@ class GeminiService:
     @staticmethod
     def _calculate_trustworthiness(scam_likelihood: str, concerning_clauses_count: int) -> tuple:
         """Calculate trustworthiness score, grade, and risk level based on analysis."""
-        # Base score based on scam likelihood
+        # Base score based on scam likelihood - MORE GENEROUS STARTING POINTS
         base_score = {
-            "Low": 85,
-            "Medium": 60,
-            "High": 30
-        }.get(scam_likelihood, 50)
+            "Low": 90,    # Increased from 85
+            "Medium": 70, # Increased from 60
+            "High": 40    # Increased from 30
+        }.get(scam_likelihood, 60)  # Default is more generous too (was 50)
         
-        # Adjust score based on concerning clauses
+        # Adjust score based on concerning clauses - LESS SEVERE PENALTIES
         if concerning_clauses_count == 0:
             adjustment = 10  # Bonus for no concerning clauses
-        elif concerning_clauses_count <= 2:
+        elif concerning_clauses_count == 1:
+            adjustment = 0   # Single concern is normal, no penalty
+        elif concerning_clauses_count <= 3:
             adjustment = -5  # Minor concerns
-        elif concerning_clauses_count <= 5:
-            adjustment = -15  # Moderate concerns
+        elif concerning_clauses_count <= 6:
+            adjustment = -10 # Moderate concerns (was -15)
         else:
-            adjustment = -25  # Serious concerns
+            adjustment = -20 # Serious concerns (was -25)
             
         # Calculate final score (keeping within 0-100 range)
         score = max(0, min(100, base_score + adjustment))
         
-        # Determine grade based on score
-        if score >= 90:
+        # Determine grade based on score - MORE RELAXED GRADING
+        if score >= 85:      # Was 90
             grade = TrustworthinessGrade.A
-        elif score >= 80:
+        elif score >= 75:    # Was 80
             grade = TrustworthinessGrade.B
-        elif score >= 60:
+        elif score >= 55:    # Was 60
             grade = TrustworthinessGrade.C
-        elif score >= 40:
+        elif score >= 35:    # Was 40
             grade = TrustworthinessGrade.D
         else:
             grade = TrustworthinessGrade.F
             
-        # Determine risk level
-        if score >= 80:
+        # Determine risk level - MORE RELAXED RISK ASSESSMENT
+        if score >= 75:      # Was 80
             risk_level = RiskLevel.LOW_RISK
-        elif score >= 60:
+        elif score >= 55:    # Was 60
             risk_level = RiskLevel.MEDIUM_RISK
-        elif score >= 30:
+        elif score >= 25:    # Was 30
             risk_level = RiskLevel.HIGH_RISK
         else:
             risk_level = RiskLevel.VERY_HIGH_RISK

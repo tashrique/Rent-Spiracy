@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.utils.db import Database
-from app.routers import analysis, file_upload, documents
+from app.routers import analysis, file_upload, documents, health
 import uvicorn
 import os
 import logging
@@ -23,33 +24,40 @@ load_dotenv()
 # Create FastAPI app
 app = FastAPI(
     title="Rent-Spiracy API",
-    description="Backend API for the Rent-Spiracy application, analyzing rental listings for potential scams",
-    version="0.1.0"
+    description="Rental scam detection and lease analysis",
+    version="1.0.0"
 )
 
-# Configure CORS
-origins = [
-    "http://localhost:3000",  # Development frontend
-    "http://127.0.0.1:3000",  # Alternative local address
-    "https://rent-spiracy.vercel.app",  # Production frontend on Vercel
-    "https://rentspiracy.tech",  # Custom domain
-    "https://www.rentspiracy.tech",  # www subdomain
-]
-
+# CORS configuration (completely open for debugging)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all Vercel preview deployments
-    allow_credentials=False,  # Set to False since we're using 'omit' in frontend
+    allow_origins=["*"],  # Allow all origins 
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
     max_age=86400,  # Cache preflight requests for 24 hours
 )
 
-# Include routers
-app.include_router(analysis.router)
+# Add a custom middleware to log requests and ensure CORS headers
+@app.middleware("http")
+async def log_and_add_cors_headers(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    
+    # Process the request
+    response = await call_next(request)
+    
+    # Ensure CORS headers are present on every response
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
+
+# Register routers - use the routers from the imports
 app.include_router(file_upload.router)
+app.include_router(analysis.router)
+app.include_router(health.router)
 app.include_router(documents.router)
 
 
@@ -76,16 +84,16 @@ async def shutdown_db_client():
 
 @app.get("/")
 async def root():
+    """Root endpoint"""
     return {
-        "message": "Welcome to the Rent-Spiracy API",
-        "docs": "/docs",
-        "status": "online"
+        "message": "Welcome to Rent-Spiracy API",
+        "endpoints": [
+            "/upload/document",
+            "/analysis/analyze-rental",
+            "/health",
+            "/documents"
+        ]
     }
-
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
 
 # This allows the file to be run directly or through uvicorn
 if __name__ == "__main__":

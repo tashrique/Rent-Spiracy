@@ -50,6 +50,7 @@ class ClauseAnalysis(BaseModel):
     simplified_text: str
     is_concerning: bool
     reason: Optional[str] = None
+    california_law: Optional[str] = None  # California legal code references
 
 
 class ScamLikelihood(str, Enum):
@@ -75,6 +76,13 @@ class TrustworthinessGrade(str, Enum):
     F = "F"
 
 
+class CaliforniaTenantRights(BaseModel):
+    """Model for California-specific tenant rights information"""
+    relevant_statutes: List[str] = []
+    local_ordinances: List[str] = []
+    case_law: List[str] = []
+
+
 class AnalysisResult(BaseModel):
     """Model for analysis results."""
     id: str = Field(default_factory=lambda: str(datetime.now().timestamp()))
@@ -88,6 +96,7 @@ class AnalysisResult(BaseModel):
     suggested_questions: List[str] = []
     created_at: datetime = Field(default_factory=datetime.now)
     raw_response: Optional[str] = None  # Raw response from LLM for frontend processing
+    california_tenant_rights: Optional[CaliforniaTenantRights] = None  # California tenant rights info
 
     class Config:
         schema_extra = {
@@ -106,13 +115,25 @@ class AnalysisResult(BaseModel):
                     {
                         "text": "Tenant shall pay a security deposit of $1000.",
                         "simplified_text": "You need to pay $1000 as a security deposit.",
-                        "is_concerning": False
+                        "is_concerning": False,
+                        "california_law": "California Civil Code § 1950.5 limits security deposits to twice the monthly rent for unfurnished units."
                     }
                 ],
                 "suggested_questions": [
                     "Can I see the property before signing?",
                     "Are utilities included in the rent?"
                 ],
-                "created_at": "2023-04-01T12:00:00"
+                "created_at": "2023-04-01T12:00:00",
+                "california_tenant_rights": {
+                    "relevant_statutes": [
+                        "California Civil Code § 1950.5 - Security Deposits: Limits security deposits to 2x monthly rent for unfurnished properties."
+                    ],
+                    "local_ordinances": [
+                        "San Francisco Rent Ordinance - May limit rent increases and provide additional eviction protections."
+                    ],
+                    "case_law": [
+                        "Green v. Superior Court (1974) - Established implied warranty of habitability in California."
+                    ]
+                }
             }
         }

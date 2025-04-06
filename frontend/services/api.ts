@@ -8,7 +8,7 @@ const getBaseUrl = (): string => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   
   // If environment variable is not set, fallback to localhost
-  return apiUrl || 'http://localhost:8000';
+  return apiUrl || 'http://127.0.0.1:8000';
 };
 
 /**
@@ -65,6 +65,7 @@ export interface SimplifiedClause {
   simplified_text: string;
   is_concerning: boolean;
   reason?: string;
+  california_law?: string;
 }
 
 export interface AnalysisResult {
@@ -79,6 +80,11 @@ export interface AnalysisResult {
   suggested_questions: string[];
   created_at: string;
   raw_response?: string; // Raw LLM response for frontend processing
+  california_tenant_rights?: {
+    relevant_statutes: string[];
+    local_ordinances: string[];
+    case_law: string[];
+  };
 }
 
 // Alias for backward compatibility
@@ -140,22 +146,49 @@ export const scamDetectionApi = {
     formData.append('language', language);
     formData.append('voice_output', String(voiceOutput));
     
+    console.log(`Making file upload request to ${url} with file: ${file.name}, size: ${file.size}`);
+    
     try {
+      // Make the upload request
       const response = await fetch(url, {
         method: 'POST',
         body: formData,
         mode: 'cors',
         credentials: 'omit',
+        headers: {
+          'Accept': 'application/json',
+          'Origin': window.location.origin,
+        },
       });
       
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `API error: ${response.status}`);
+        let errorMessage = `API error: ${response.status}`;
+        try {
+          const errorData = await response.text();
+          console.error(`Server error: ${response.status} - ${errorData}`);
+          
+          // Try to parse JSON if possible
+          try {
+            const jsonError = JSON.parse(errorData);
+            errorMessage = jsonError.detail || errorMessage;
+          } catch {
+            errorMessage = errorData || errorMessage;
+          }
+        } catch (e) {
+          console.error('Could not read error response:', e);
+        }
+        
+        throw new Error(errorMessage);
       }
       
-      return await response.json();
+      const responseData = await response.json();
+      console.log('Response data:', responseData);
+      return responseData;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('File upload request failed:', error);
       throw error;
     }
   },
@@ -187,6 +220,74 @@ export const scamDetectionApi = {
   // Check API status
   checkStatus: (): Promise<{ status: string; message: string }> => {
     return apiRequest<{ status: string; message: string }>('/health');
+  },
+  
+  // Multiple file upload endpoint
+  uploadMultipleDocuments: async (
+    files: File[], 
+    listingUrl?: string, 
+    propertyAddress?: string,
+    language: string = 'english',
+    voiceOutput: boolean = false
+  ): Promise<AnalysisResult> => {
+    const url = `${getBaseUrl()}/upload/documents`;
+    const formData = new FormData();
+    
+    // Add each file to the formData with the same field name
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    
+    if (listingUrl) formData.append('listing_url', listingUrl);
+    if (propertyAddress) formData.append('property_address', propertyAddress);
+    formData.append('language', language);
+    formData.append('voice_output', String(voiceOutput));
+    
+    console.log(`Making multiple file upload request to ${url} with ${files.length} files`);
+    
+    try {
+      // Make the upload request
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          'Accept': 'application/json',
+          'Origin': window.location.origin,
+        },
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      if (!response.ok) {
+        let errorMessage = `API error: ${response.status}`;
+        try {
+          const errorData = await response.text();
+          console.error(`Server error: ${response.status} - ${errorData}`);
+          
+          // Try to parse JSON if possible
+          try {
+            const jsonError = JSON.parse(errorData);
+            errorMessage = jsonError.detail || errorMessage;
+          } catch {
+            errorMessage = errorData || errorMessage;
+          }
+        } catch (e) {
+          console.error('Could not read error response:', e);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const responseData = await response.json();
+      console.log('Response data:', responseData);
+      return responseData;
+    } catch (error) {
+      console.error('Multiple file upload request failed:', error);
+      throw error;
+    }
   },
 };
 
