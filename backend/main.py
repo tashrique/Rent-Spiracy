@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.utils.db import Database
 from app.routers import analysis, file_upload, documents
@@ -6,6 +6,7 @@ import uvicorn
 import os
 import logging
 from dotenv import load_dotenv
+<<<<<<< HEAD
 
 # Configure logging
 logging.basicConfig(
@@ -14,6 +15,16 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler()
     ]
+=======
+from app.middleware.rate_limiter import RateLimiter
+from app.database import client, db
+from fastapi import Request
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,  # Set to DEBUG for more detailed logs
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+>>>>>>> 7bedcd5b5d7989270286c368c63dc83e774b6c90
 )
 logger = logging.getLogger("rent-spiracy")
 
@@ -48,10 +59,15 @@ app.add_middleware(
     max_age=86400,  # Cache preflight requests for 24 hours
 )
 
+<<<<<<< HEAD
 # Include routers
 app.include_router(analysis.router, prefix="/api")
 app.include_router(file_upload.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
+=======
+# Add rate limiting middleware
+app.add_middleware(RateLimiter)
+>>>>>>> 7bedcd5b5d7989270286c368c63dc83e774b6c90
 
 
 @app.on_event("startup")
@@ -76,7 +92,6 @@ async def shutdown_db_client():
     except Exception as e:
         logger.error(f"Error during database disconnect: {str(e)}")
 
-
 @app.get("/")
 async def root():
     return {
@@ -85,10 +100,26 @@ async def root():
         "status": "online"
     }
 
-
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    try:
+        logger.debug("Attempting to connect to MongoDB...")
+        
+        # Try a simple database operation
+        await db.command("ping")
+        logger.debug("Successfully pinged database")
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "database_name": db.name
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={"status": "unhealthy", "error": str(e)}
+        )
 
 # This allows the file to be run directly or through uvicorn
 if __name__ == "__main__":
