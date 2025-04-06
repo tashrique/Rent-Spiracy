@@ -4,6 +4,7 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  --focus-ring-color: 37, 99, 235;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -14,6 +15,7 @@
   }
 }
 
+/* Improve text readability */
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -22,6 +24,29 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+  line-height: 1.5;
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Improve accessibility with better focus styles */
+*:focus-visible {
+  outline: 3px solid rgba(var(--focus-ring-color), 0.6);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Skip link styles */
+.sr-only:not(:focus):not(:active) {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 /* Fun animations */
@@ -76,4 +101,65 @@ body {
 
 .animate-bounceIn {
   animation: bounceIn 0.3s ease-out;
+}
+
+/* Reduced motion preferences support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .motion-safe\:animate-pulse {
+    animation: none !important;
+  }
+  
+  .motion-safe\:animation-delay-1000,
+  .motion-safe\:animation-delay-2000 {
+    animation-delay: 0ms !important;
+  }
+  
+  .motion-reduce\:animate-\[spin_1\.5s_linear_infinite\] {
+    animation: none !important;
+  }
+}
+
+/* Improved text readability */
+p, li, h1, h2, h3, h4, h5, h6 {
+  max-width: 70ch;
+}
+
+/* High contrast improvements */
+@media (forced-colors: active) {
+  * {
+    border-color: CanvasText;
+  }
+  
+  button, a {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Keyboard accessibility enhancements */
+[role="button"],
+button,
+a {
+  cursor: pointer;
+  transition: outline-offset 0.1s ease;
+}
+
+[role="button"]:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline-offset: 4px;
+}
+
+/* Text spacing for cognitive accessibility */
+@media screen and (min-width: 768px) {
+  body {
+    letter-spacing: 0.01em;
+    word-spacing: 0.025em;
+  }
 }
