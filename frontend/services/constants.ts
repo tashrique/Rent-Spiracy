@@ -308,3 +308,635 @@ export const translations = {
       legalDisclaimer: "هذه الأداة ليست وثيقة قانونية ولا تقدم مشورة قانونية. وهي مخصصة لأغراض إعلامية فقط.",
     },
   };
+
+
+export const lawyers = {
+  "english": [
+    {
+      "name": "Mary Shah",
+      "languages": [
+        "english",
+        "chinese"
+      ],
+      "specialization": "Housing Law",
+      "location": "Albuquerque, NM",
+      "region": "West",
+      "phone": "(553) 968-8447",
+      "email": "lawyer2@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/27.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 4.4
+    },
+    {
+      "name": "Karen Martin",
+      "languages": [
+        "english",
+        "spanish"
+      ],
+      "specialization": "Lease Agreements",
+      "location": "Seattle, WA",
+      "region": "Pacific",
+      "phone": "(924) 844-7696",
+      "email": "lawyer3@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/99.jpg",
+      "freeDuration": "1 hour",
+      "rating": 3.3
+    },
+    {
+      "name": "James López",
+      "languages": [
+        "english",
+        "chinese"
+      ],
+      "specialization": "Housing Law",
+      "location": "Portland, OR",
+      "region": "Pacific",
+      "phone": "(575) 341-2797",
+      "email": "lawyer10@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/62.jpg",
+      "freeDuration": "1 hour",
+      "rating": 4.8
+    },
+    {
+      "name": "Rahul Anderson",
+      "languages": [
+        "english",
+        "chinese",
+        "spanish"
+      ],
+      "specialization": "Security Deposit Disputes",
+      "location": "Las Vegas, NV",
+      "region": "West",
+      "phone": "(880) 547-5366",
+      "email": "lawyer18@example.com",
+      "website": "https://lawyer18.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/65.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 4.6
+    }
+  ],
+  "chinese": [
+    {
+      "name": "Mary Shah",
+      "languages": [
+        "english",
+        "chinese"
+      ],
+      "specialization": "Housing Law",
+      "location": "Albuquerque, NM",
+      "region": "West",
+      "phone": "(553) 968-8447",
+      "email": "lawyer2@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/27.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 4.4
+    },
+    {
+      "name": "Joseph Jones",
+      "languages": [
+        "chinese",
+        "hindi",
+        "swahili"
+      ],
+      "specialization": "Security Deposit Disputes",
+      "location": "Orlando, FL",
+      "region": "South",
+      "phone": "(308) 782-7787",
+      "email": "lawyer6@example.com",
+      "website": "https://lawyer6.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/88.jpg",
+      "freeDuration": "15 minutes",
+      "rating": 4.2
+    },
+    {
+      "name": "Ji-hoon Miller",
+      "languages": [
+        "spanish",
+        "chinese"
+      ],
+      "specialization": "Real Estate Law",
+      "location": "Dallas, TX",
+      "region": "South",
+      "phone": "(271) 917-7119",
+      "email": "lawyer7@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/men/77.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 3.3
+    },
+    {
+      "name": "James López",
+      "languages": [
+        "english",
+        "chinese"
+      ],
+      "specialization": "Housing Law",
+      "location": "Portland, OR",
+      "region": "Pacific",
+      "phone": "(575) 341-2797",
+      "email": "lawyer10@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/62.jpg",
+      "freeDuration": "1 hour",
+      "rating": 4.8
+    },
+    {
+      "name": "Jennifer Park",
+      "languages": [
+        "arabic",
+        "chinese"
+      ],
+      "specialization": "Real Estate Law",
+      "location": "Sacramento, CA",
+      "region": "Pacific",
+      "phone": "(581) 178-3788",
+      "email": "lawyer12@example.com",
+      "website": "https://lawyer12.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/57.jpg",
+      "freeDuration": "1 hour",
+      "rating": 3.2
+    },
+    {
+      "name": "Mary Das",
+      "languages": [
+        "korean",
+        "chinese",
+        "bengali"
+      ],
+      "specialization": "Lease Agreements",
+      "location": "Philadelphia, PA",
+      "region": "Northeast",
+      "phone": "(529) 571-3759",
+      "email": "lawyer16@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/84.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 5.0
+    },
+    {
+      "name": "Rahul Anderson",
+      "languages": [
+        "english",
+        "chinese",
+        "spanish"
+      ],
+      "specialization": "Security Deposit Disputes",
+      "location": "Las Vegas, NV",
+      "region": "West",
+      "phone": "(880) 547-5366",
+      "email": "lawyer18@example.com",
+      "website": "https://lawyer18.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/65.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 4.6
+    }
+  ],
+  "hindi": [
+    {
+      "name": "Jennifer Miller",
+      "languages": [
+        "hindi"
+      ],
+      "specialization": "Housing Contracts",
+      "location": "Denver, CO",
+      "region": "West",
+      "phone": "(694) 848-4349",
+      "email": "lawyer1@example.com",
+      "website": "https://lawyer1.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/64.jpg",
+      "freeDuration": "1 hour",
+      "rating": 3.1
+    },
+    {
+      "name": "Fatima Park",
+      "languages": [
+        "arabic",
+        "hindi"
+      ],
+      "specialization": "Housing Law",
+      "location": "Portland, OR",
+      "region": "Pacific",
+      "phone": "(624) 519-5938",
+      "email": "lawyer5@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/men/20.jpg",
+      "freeDuration": null,
+      "rating": 4.8
+    },
+    {
+      "name": "Joseph Jones",
+      "languages": [
+        "chinese",
+        "hindi",
+        "swahili"
+      ],
+      "specialization": "Security Deposit Disputes",
+      "location": "Orlando, FL",
+      "region": "South",
+      "phone": "(308) 782-7787",
+      "email": "lawyer6@example.com",
+      "website": "https://lawyer6.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/88.jpg",
+      "freeDuration": "15 minutes",
+      "rating": 4.2
+    },
+    {
+      "name": "Priya Smith",
+      "languages": [
+        "arabic",
+        "hindi"
+      ],
+      "specialization": "Landlord-Tenant Disputes",
+      "location": "Miami, FL",
+      "region": "South",
+      "phone": "(824) 325-3268",
+      "email": "lawyer8@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/men/48.jpg",
+      "freeDuration": "15 minutes",
+      "rating": 3.3
+    }
+  ],
+  "spanish": [
+    {
+      "name": "Karen Martin",
+      "languages": [
+        "english",
+        "spanish"
+      ],
+      "specialization": "Lease Agreements",
+      "location": "Seattle, WA",
+      "region": "Pacific",
+      "phone": "(924) 844-7696",
+      "email": "lawyer3@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/99.jpg",
+      "freeDuration": "1 hour",
+      "rating": 3.3
+    },
+    {
+      "name": "Ji-hoon Miller",
+      "languages": [
+        "spanish",
+        "chinese"
+      ],
+      "specialization": "Real Estate Law",
+      "location": "Dallas, TX",
+      "region": "South",
+      "phone": "(271) 917-7119",
+      "email": "lawyer7@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/men/77.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 3.3
+    },
+    {
+      "name": "Linda Patel",
+      "languages": [
+        "spanish"
+      ],
+      "specialization": "Housing Discrimination",
+      "location": "Seattle, WA",
+      "region": "Pacific",
+      "phone": "(582) 302-3069",
+      "email": "lawyer9@example.com",
+      "website": "https://lawyer9.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/24.jpg",
+      "freeDuration": "15 minutes",
+      "rating": 3.5
+    },
+    {
+      "name": "Rahul Anderson",
+      "languages": [
+        "english",
+        "chinese",
+        "spanish"
+      ],
+      "specialization": "Security Deposit Disputes",
+      "location": "Las Vegas, NV",
+      "region": "West",
+      "phone": "(880) 547-5366",
+      "email": "lawyer18@example.com",
+      "website": "https://lawyer18.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/65.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 4.6
+    },
+    {
+      "name": "Maria Garcia",
+      "languages": [
+        "bengali",
+        "spanish"
+      ],
+      "specialization": "Eviction Defense",
+      "location": "Nashville, TN",
+      "region": "South",
+      "phone": "(139) 613-8454",
+      "email": "lawyer20@example.com",
+      "website": "https://lawyer20.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/81.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 4.5
+    }
+  ],
+  "korean": [
+    {
+      "name": "Juan Chen",
+      "languages": [
+        "korean",
+        "bengali"
+      ],
+      "specialization": "Landlord-Tenant Disputes",
+      "location": "Pittsburgh, PA",
+      "region": "Northeast",
+      "phone": "(709) 154-2102",
+      "email": "lawyer11@example.com",
+      "website": "https://lawyer11.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/25.jpg",
+      "freeDuration": null,
+      "rating": 3.9
+    },
+    {
+      "name": "Ahmed Williams",
+      "languages": [
+        "bengali",
+        "korean"
+      ],
+      "specialization": "Housing Contracts",
+      "location": "Columbus, OH",
+      "region": "Midwest",
+      "phone": "(374) 672-6131",
+      "email": "lawyer14@example.com",
+      "website": "https://lawyer14.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/37.jpg",
+      "freeDuration": "1 hour",
+      "rating": 3.1
+    },
+    {
+      "name": "Mary Das",
+      "languages": [
+        "korean",
+        "chinese",
+        "bengali"
+      ],
+      "specialization": "Lease Agreements",
+      "location": "Philadelphia, PA",
+      "region": "Northeast",
+      "phone": "(529) 571-3759",
+      "email": "lawyer16@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/84.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 5.0
+    }
+  ],
+  "bengali": [
+    {
+      "name": "Juan Chen",
+      "languages": [
+        "korean",
+        "bengali"
+      ],
+      "specialization": "Landlord-Tenant Disputes",
+      "location": "Pittsburgh, PA",
+      "region": "Northeast",
+      "phone": "(709) 154-2102",
+      "email": "lawyer11@example.com",
+      "website": "https://lawyer11.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/25.jpg",
+      "freeDuration": null,
+      "rating": 3.9
+    },
+    {
+      "name": "Ahmed Williams",
+      "languages": [
+        "bengali",
+        "korean"
+      ],
+      "specialization": "Housing Contracts",
+      "location": "Columbus, OH",
+      "region": "Midwest",
+      "phone": "(374) 672-6131",
+      "email": "lawyer14@example.com",
+      "website": "https://lawyer14.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/37.jpg",
+      "freeDuration": "1 hour",
+      "rating": 3.1
+    },
+    {
+      "name": "Mary Das",
+      "languages": [
+        "korean",
+        "chinese",
+        "bengali"
+      ],
+      "specialization": "Lease Agreements",
+      "location": "Philadelphia, PA",
+      "region": "Northeast",
+      "phone": "(529) 571-3759",
+      "email": "lawyer16@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/84.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 5.0
+    },
+    {
+      "name": "Nancy Jones",
+      "languages": [
+        "arabic",
+        "bengali"
+      ],
+      "specialization": "Real Estate Law",
+      "location": "St. Louis, MO",
+      "region": "Midwest",
+      "phone": "(419) 994-2844",
+      "email": "lawyer19@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/men/14.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 3.8
+    },
+    {
+      "name": "Maria Garcia",
+      "languages": [
+        "bengali",
+        "spanish"
+      ],
+      "specialization": "Eviction Defense",
+      "location": "Nashville, TN",
+      "region": "South",
+      "phone": "(139) 613-8454",
+      "email": "lawyer20@example.com",
+      "website": "https://lawyer20.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/81.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 4.5
+    }
+  ],
+  "swahili": [
+    {
+      "name": "Juan Singh",
+      "languages": [
+        "arabic",
+        "swahili"
+      ],
+      "specialization": "Security Deposit Disputes",
+      "location": "Boston, MA",
+      "region": "Northeast",
+      "phone": "(973) 322-2126",
+      "email": "lawyer4@example.com",
+      "website": "https://lawyer4.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/8.jpg",
+      "freeDuration": "1 hour",
+      "rating": 4.6
+    },
+    {
+      "name": "Joseph Jones",
+      "languages": [
+        "chinese",
+        "hindi",
+        "swahili"
+      ],
+      "specialization": "Security Deposit Disputes",
+      "location": "Orlando, FL",
+      "region": "South",
+      "phone": "(308) 782-7787",
+      "email": "lawyer6@example.com",
+      "website": "https://lawyer6.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/88.jpg",
+      "freeDuration": "15 minutes",
+      "rating": 4.2
+    },
+    {
+      "name": "Ji-hoon Anderson",
+      "languages": [
+        "swahili"
+      ],
+      "specialization": "Housing Contracts",
+      "location": "Houston, TX",
+      "region": "South",
+      "phone": "(855) 628-2026",
+      "email": "lawyer13@example.com",
+      "website": "https://lawyer13.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/72.jpg",
+      "freeDuration": null,
+      "rating": 5.0
+    }
+  ],
+  "arabic": [
+    {
+      "name": "Juan Singh",
+      "languages": [
+        "arabic",
+        "swahili"
+      ],
+      "specialization": "Security Deposit Disputes",
+      "location": "Boston, MA",
+      "region": "Northeast",
+      "phone": "(973) 322-2126",
+      "email": "lawyer4@example.com",
+      "website": "https://lawyer4.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/8.jpg",
+      "freeDuration": "1 hour",
+      "rating": 4.6
+    },
+    {
+      "name": "Fatima Park",
+      "languages": [
+        "arabic",
+        "hindi"
+      ],
+      "specialization": "Housing Law",
+      "location": "Portland, OR",
+      "region": "Pacific",
+      "phone": "(624) 519-5938",
+      "email": "lawyer5@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/men/20.jpg",
+      "freeDuration": null,
+      "rating": 4.8
+    },
+    {
+      "name": "Priya Smith",
+      "languages": [
+        "arabic",
+        "hindi"
+      ],
+      "specialization": "Landlord-Tenant Disputes",
+      "location": "Miami, FL",
+      "region": "South",
+      "phone": "(824) 325-3268",
+      "email": "lawyer8@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/men/48.jpg",
+      "freeDuration": "15 minutes",
+      "rating": 3.3
+    },
+    {
+      "name": "Jennifer Park",
+      "languages": [
+        "arabic",
+        "chinese"
+      ],
+      "specialization": "Real Estate Law",
+      "location": "Sacramento, CA",
+      "region": "Pacific",
+      "phone": "(581) 178-3788",
+      "email": "lawyer12@example.com",
+      "website": "https://lawyer12.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/women/57.jpg",
+      "freeDuration": "1 hour",
+      "rating": 3.2
+    },
+    {
+      "name": "Linda Martin",
+      "languages": [
+        "arabic"
+      ],
+      "specialization": "Lease Agreements",
+      "location": "Indianapolis, IN",
+      "region": "Midwest",
+      "phone": "(219) 329-2091",
+      "email": "lawyer15@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/women/82.jpg",
+      "freeDuration": "1 hour",
+      "rating": 4.3
+    },
+    {
+      "name": "Fatima Rodriguez",
+      "languages": [
+        "arabic"
+      ],
+      "specialization": "Housing Contracts",
+      "location": "Chicago, IL",
+      "region": "Midwest",
+      "phone": "(611) 489-6923",
+      "email": "lawyer17@example.com",
+      "website": "https://lawyer17.example.com",
+      "pictureUrl": "https://randomuser.me/api/portraits/men/99.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 4.1
+    },
+    {
+      "name": "Nancy Jones",
+      "languages": [
+        "arabic",
+        "bengali"
+      ],
+      "specialization": "Real Estate Law",
+      "location": "St. Louis, MO",
+      "region": "Midwest",
+      "phone": "(419) 994-2844",
+      "email": "lawyer19@example.com",
+      "website": null,
+      "pictureUrl": "https://randomuser.me/api/portraits/men/14.jpg",
+      "freeDuration": "30 minutes",
+      "rating": 3.8
+    }
+  ]
+}

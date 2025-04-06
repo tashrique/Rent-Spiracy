@@ -47,10 +47,48 @@ export default function ScamDetectionForm({
     (translations[language as keyof typeof translations] as TranslationType) ||
     (translations.english as TranslationType);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const file = event.target.files[0];
+
+      // Check file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        setError(
+          `File too large (max 10MB). This file is ${(
+            file.size /
+            1024 /
+            1024
+          ).toFixed(2)}MB.`
+        );
+        return;
+      }
+
+      // Simple check for password-protected PDF
+      if (file.type === "application/pdf") {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          const pdfContent = new TextDecoder().decode(
+            uint8Array.slice(0, 1024)
+          );
+
+          // Most encrypted PDFs have "/Encrypt" in their header
+          if (pdfContent.includes("/Encrypt")) {
+            setError(
+              "This PDF appears to be password-protected. Please upload an unprotected document."
+            );
+            return;
+          }
+        } catch (err) {
+          console.error("Error checking PDF file:", err);
+          // Continue anyway, let the server handle it
+        }
+      }
+
+      setSelectedFiles((prev) => [...prev, file]);
       setUploadProgress(0);
       setAnalysisStage(null);
     }
@@ -72,7 +110,6 @@ export default function ScamDetectionForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     if (selectedFiles.length === 0) {
       setError(t.atLeastOneField);
@@ -80,6 +117,7 @@ export default function ScamDetectionForm({
     }
 
     setIsSubmitting(true);
+    setError(null);
     setUploadProgress(0);
     setAnalysisStage(t.analysisStage1);
 
@@ -113,25 +151,55 @@ export default function ScamDetectionForm({
       if (selectedFiles.length > 0) {
         console.log(`Uploading ${selectedFiles.length} files`);
 
-        if (selectedFiles.length === 1) {
-          response = await scamDetectionApi.uploadDocument(
-            selectedFiles[0],
-            undefined,
-            undefined,
-            apiLanguage,
-            false
-          );
-        } else {
-          response = await scamDetectionApi.uploadMultipleDocuments(
-            selectedFiles,
-            undefined,
-            undefined,
-            apiLanguage,
-            false
-          );
-        }
+        try {
+          if (selectedFiles.length === 1) {
+            response = await scamDetectionApi.uploadDocument(
+              selectedFiles[0],
+              undefined,
+              undefined,
+              apiLanguage,
+              false
+            );
+          } else {
+            response = await scamDetectionApi.uploadMultipleDocuments(
+              selectedFiles,
+              undefined,
+              undefined,
+              apiLanguage,
+              false
+            );
+          }
 
-        console.log("File upload response:", response);
+          console.log("File upload response:", response);
+        } catch (error) {
+          console.error("Upload error:", error);
+          clearInterval(progressInterval);
+
+          // Extract error message for better user feedback
+          let errorMessage = t.errorText;
+          if (error instanceof Error) {
+            // Enhance specific error types with more helpful messages
+            if (
+              error.message.includes("password-protected") ||
+              error.message.includes("encrypted")
+            ) {
+              errorMessage =
+                "This document appears to be password-protected. Please remove the password protection and try again.";
+            } else if (error.message.includes("corrupted")) {
+              errorMessage =
+                "This document appears to be corrupted. Please try a different file.";
+            } else if (error.message.includes("size")) {
+              errorMessage =
+                "File size exceeds the maximum allowed limit (10MB).";
+            } else {
+              errorMessage = error.message;
+            }
+          }
+
+          setError(errorMessage);
+          setIsSubmitting(false);
+          return;
+        }
       } else {
         console.log("No files selected");
       }

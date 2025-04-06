@@ -64,6 +64,8 @@ async function apiRequest<T>(
 // Type definitions for API requests and responses
 export type Language = 'english' | 'spanish' | 'chinese' | 'hindi' | 'korean' | 'bengali' | 'swahili' | 'arabic';
 
+export type Region = 'Northeast' | 'Midwest' | 'South' | 'West' | 'Pacific';
+
 export interface RentalAnalysisRequest {
   listing_url?: string;
   property_address?: string;
@@ -112,6 +114,23 @@ export interface Document {
   scam_score: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Lawyer {
+  id: string;
+  name: string;
+  languages: Language[];
+  specialization: string;
+  location: string;
+  region: Region;
+  phone: string;
+  email: string;
+  website?: string;
+  pictureUrl?: string;
+  freeDuration?: string;
+  rating?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**
@@ -175,7 +194,6 @@ export const scamDetectionApi = {
       });
       
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
       
       if (!response.ok) {
         let errorMessage = `API error: ${response.status}`;
@@ -186,9 +204,27 @@ export const scamDetectionApi = {
           // Try to parse JSON if possible
           try {
             const jsonError = JSON.parse(errorData);
-            errorMessage = jsonError.detail || errorMessage;
+            // Handle specific error messages for common issues
+            if (jsonError.detail && typeof jsonError.detail === 'string') {
+              const detail = jsonError.detail;
+              
+              if (detail.includes('Could not extract text') || detail.includes('password-protected')) {
+                errorMessage = "Could not read the document. The file may be corrupted, password-protected, or in an unsupported format.";
+              } else if (detail.includes('size limit')) {
+                errorMessage = "The file is too large. Please upload a smaller document.";
+              } else if (detail.includes('file type')) {
+                errorMessage = "Unsupported file type. Please upload a PDF, Word document, or text file.";
+              } else {
+                errorMessage = jsonError.detail;
+              }
+            }
           } catch {
-            errorMessage = errorData || errorMessage;
+            // If not valid JSON, use the text response
+            if (errorData.includes('Could not extract text')) {
+              errorMessage = "Could not read the document. The file may be corrupted, password-protected, or in an unsupported format.";
+            } else {
+              errorMessage = errorData || errorMessage;
+            }
           }
         } catch (e) {
           console.error('Could not read error response:', e);
@@ -198,7 +234,6 @@ export const scamDetectionApi = {
       }
       
       const responseData = await response.json();
-      console.log('Response data:', responseData);
       return responseData;
     } catch (error) {
       console.error('File upload request failed:', error);
@@ -304,7 +339,54 @@ export const scamDetectionApi = {
   },
 };
 
+/**
+ * API endpoints for lawyers
+ */
+export const lawyersApi = {
+  // Get all lawyers with optional filtering
+  getLawyers: (options?: {
+    language?: Language;
+    region?: Region;
+    specialization?: string;
+    skip?: number;
+    limit?: number;
+  }): Promise<Lawyer[]> => {
+    // Build query string from options
+    const queryParams = new URLSearchParams();
+    if (options?.language) queryParams.append('language', options.language);
+    if (options?.region) queryParams.append('region', options.region);
+    if (options?.specialization) queryParams.append('specialization', options.specialization);
+    if (options?.skip !== undefined) queryParams.append('skip', options.skip.toString());
+    if (options?.limit !== undefined) queryParams.append('limit', options.limit.toString());
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return apiRequest<Lawyer[]>(`/lawyers${queryString}`);
+  },
+  
+  // Get a lawyer by ID
+  getLawyer: (id: string): Promise<Lawyer> => {
+    return apiRequest<Lawyer>(`/lawyers/${id}`);
+  },
+  
+  // Get lawyers by language
+  getLawyersByLanguage: (language: Language): Promise<Lawyer[]> => {
+    return apiRequest<Lawyer[]>(`/lawyers/filter/by-language/${language}`);
+  },
+  
+  // Get lawyers filtered by both language and region
+  getFilteredLawyers: (language?: Language, region?: Region): Promise<Lawyer[]> => {
+    const queryParams = new URLSearchParams();
+    if (language) queryParams.append('language', language);
+    if (region) queryParams.append('region', region);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return apiRequest<Lawyer[]>(`/lawyers${queryString}`);
+  }
+};
+
+// Combine API services into a single export
 export const api = {
   baseUrl: getBaseUrl(),
   scamDetection: scamDetectionApi,
+  lawyers: lawyersApi
 }; 
