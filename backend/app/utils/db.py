@@ -1,6 +1,8 @@
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+import asyncio
+from typing import Optional
 
 # Load environment variables
 load_dotenv()
@@ -9,44 +11,55 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 DATABASE_NAME = os.getenv("DATABASE_NAME", "rent-spiracy")
 
-# Create a singleton database client
-
-
 class Database:
-    client: AsyncIOMotorClient = None
-
+    _instance: Optional['Database'] = None
+    _lock = asyncio.Lock()
+    
+    def __init__(self):
+        self.client: Optional[AsyncIOMotorClient] = None
+        
     @classmethod
-    async def connect_db(cls):
+    async def get_instance(cls) -> 'Database':
+        if not cls._instance:
+            async with cls._lock:
+                if not cls._instance:
+                    cls._instance = cls()
+        return cls._instance
+
+    async def connect_db(self):
         """Connect to MongoDB."""
-        if cls.client is None:
-            cls.client = AsyncIOMotorClient(MONGO_URI)
+        if self.client is None:
+            self.client = AsyncIOMotorClient(
+                MONGO_URI,
+                maxPoolSize=10,
+                minPoolSize=1,
+                maxIdleTimeMS=30000
+            )
             print("MongoDB connection established")
 
-    @classmethod
-    async def close_db(cls):
+    async def close_db(self):
         """Close MongoDB connection."""
-        if cls.client is not None:
-            cls.client.close()
-            cls.client = None
+        if self.client is not None:
+            self.client.close()
+            self.client = None
             print("MongoDB connection closed")
 
-    @classmethod
-    def get_db(cls):
+    def get_db(self):
         """Get database instance."""
-        if cls.client is None:
+        if self.client is None:
             raise ConnectionError("Database connection not established")
-        return cls.client[DATABASE_NAME]
+        return self.client[DATABASE_NAME]
 
 # Helper functions to access common collections
 
 
-def get_rentals_collection():
+async def get_rentals_collection():
     """Get rentals collection."""
-    db = Database.get_db()
-    return db.rentals
+    db_instance = await Database.get_instance()
+    return db_instance.get_db().rentals
 
 
 async def get_analyses_collection():
     """Get analyses collection."""
-    db = Database.get_db()
-    return db.analyses
+    db_instance = await Database.get_instance()
+    return db_instance.get_db().analyses

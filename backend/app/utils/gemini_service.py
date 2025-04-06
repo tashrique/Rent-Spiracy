@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import json
 import re
 import logging
+import asyncio
 from app.models.rental import ScamLikelihood, TrustworthinessGrade, RiskLevel
 
 # Configure logging
@@ -21,19 +22,36 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     logger.warning("GEMINI_API_KEY not found in environment variables")
+else:
+    logger.info("Configuring Gemini API with key starting with: " + GEMINI_API_KEY[:8] + "...")
 
-genai.configure(api_key=GEMINI_API_KEY)
+# Configure the Gemini API
+try:
+    genai.configure(api_key=GEMINI_API_KEY)
+    logger.info("Successfully configured Gemini API")
+except Exception as e:
+    logger.error(f"Failed to configure Gemini API: {str(e)}")
 
+# Rate limiting settings
+MAX_RETRIES = 3
+INITIAL_RETRY_DELAY = 5  # seconds
+MAX_RETRY_DELAY = 30  # seconds
 
 class GeminiService:
     """Service for interacting with Google's Gemini API."""
     
-    model_name = "gemini-1.5-pro"  # Using the most capable model
+    model_name = "gemini-1.5-pro"  # Updated to use the correct model name
     
     @classmethod
     def get_model(cls):
         """Get the Gemini model instance."""
-        return genai.GenerativeModel(cls.model_name)
+        try:
+            model = genai.GenerativeModel(cls.model_name)
+            logger.info(f"Successfully created Gemini model instance: {cls.model_name}")
+            return model
+        except Exception as e:
+            logger.error(f"Failed to create Gemini model instance: {str(e)}")
+            raise
     
     @classmethod
     async def analyze_rental_document(
@@ -53,6 +71,9 @@ class GeminiService:
             
         Returns:
             Dictionary with analysis results
+            
+        Raises:
+            Exception: If the API call fails or quota is exceeded
         """
         # Generate prompt for Gemini
         prompt = cls._generate_rental_analysis_prompt(
@@ -65,45 +86,83 @@ class GeminiService:
         # Get the model
         model = cls.get_model()
         
-        try:
-            # Print length of document for debugging
-            logger.info(f"Document length: {len(document_content)} characters")
-            logger.info(f"First 200 chars of document: {document_content[:200]}...")
-            
-            # Call Gemini API with structured output
-            response = model.generate_content(
-                prompt,
-                generation_config=cls._get_generation_config(),
-                safety_settings=cls._get_safety_settings()
-            )
-            
-            raw_response = ""
-            if hasattr(response, 'candidates') and response.candidates:
-                candidate = response.candidates[0]
-                if hasattr(candidate, 'content') and candidate.content:
-                    parts = candidate.content.parts
-                    if parts and len(parts) > 0:
-                        raw_response = str(parts[0])
-            else:
-                raw_response = str(response)
+        # Print length of document for debugging
+        logger.info(f"Document length: {len(document_content)} characters")
+        logger.info(f"First 200 chars of document: {document_content[:200]}...")
+        
+        retry_count = 0
+        retry_delay = INITIAL_RETRY_DELAY
+        
+        while retry_count <= MAX_RETRIES:
+            try:
+                # Call Gemini API with structured output
+                response = model.generate_content(
+                    prompt,
+                    generation_config=cls._get_generation_config(),
+                    safety_settings=cls._get_safety_settings()
+                )
+                
+                raw_response = ""
+                if hasattr(response, 'candidates') and response.candidates:
+                    candidate = response.candidates[0]
+                    if hasattr(candidate, 'content') and candidate.content:
+                        parts = candidate.content.parts
+                        if parts and len(parts) > 0:
+                            raw_response = str(parts[0])
+                else:
+                    raw_response = str(response)
+                            
+                # Debug: print raw response
+                logger.info(f"Received response from Gemini (length: {len(raw_response)} characters)")
+                logger.info(f"Response preview: {raw_response[:300]}...")
+                
+                # Process the response
+                return cls._process_gemini_response(raw_response)
+                
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Error calling Gemini API: {error_msg}")
+                
+                # Check if this is a quota error
+                if "429" in error_msg and "quota" in error_msg:
+                    retry_count += 1
+                    if retry_count <= MAX_RETRIES:
+                        # Extract retry delay from error message if available
+                        retry_match = re.search(r'retry_delay\s*{\s*seconds:\s*(\d+)', error_msg)
+                        if retry_match:
+                            suggested_delay = int(retry_match.group(1))
+                            retry_delay = min(suggested_delay, MAX_RETRY_DELAY)
+                        else:
+                            retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)
                         
-            # Debug: print raw response
-            logger.info(f"Received response from Gemini (length: {len(raw_response)} characters)")
-            logger.info(f"Response preview: {raw_response[:300]}...")
-            
-            # Process the response
-            return cls._process_gemini_response(raw_response)
-            
-        except Exception as e:
-            logger.error(f"Error calling Gemini API: {str(e)}")
-            return {
-                "error": str(e),
-                "raw_response": f"Error: {str(e)}",
-                "scam_likelihood": "Medium",  # Default fallback
-                "explanation": f"Error analyzing document: {str(e)}",
-                "clauses": [],
-                "questions": []
-            }
+                        logger.info(f"Rate limit hit. Retrying in {retry_delay} seconds (attempt {retry_count}/{MAX_RETRIES})")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    else:
+                        logger.error("Max retries exceeded for rate limit")
+                
+                # For other errors or if max retries exceeded, return a basic response
+                return {
+                    "error": error_msg,
+                    "raw_response": f"Error: {error_msg}",
+                    "scam_likelihood": "Medium",
+                    "explanation": f"Error analyzing document: {error_msg}",
+                    "clauses": [],
+                    "questions": [
+                        "Can you verify the property ownership?",
+                        "Can you view the property in person?",
+                        "Are there any fees required before viewing?",
+                        "What is included in the rent?",
+                        "What is the lease term?"
+                    ],
+                    "action_items": [
+                        "Verify the property exists and is actually for rent",
+                        "Never send money without viewing the property",
+                        "Research typical rental prices in the area",
+                        "Get all agreements in writing",
+                        "Trust your instincts if something seems off"
+                    ]
+                }
     
     @classmethod
     def _process_gemini_response(cls, raw_response: str) -> Dict[str, Any]:
@@ -528,89 +587,35 @@ class GeminiService:
     ) -> str:
         """Generate the prompt for Gemini API."""
         prompt_parts = [
-            "You are an experienced legal expert specializing in rental agreements and lease documents. Your task is to analyze the provided lease document in EXTREME DETAIL to identify potential scams, concerning clauses, tenant rights issues, and any other problematic elements.",
-            
-            "First, determine if this is actually a lease agreement. Be VERY CAREFUL with this determination - only classify as 'not a lease' if the document is clearly something else like a tax form, bank statement, or random text. A basic or template lease should still be identified as a lease agreement, even if it's incomplete. If it has sections about rent, security deposit, tenant obligations, etc., it is likely a lease. If it's not a lease agreement, explicitly state this is NOT a lease agreement, explain what it appears to be, and why this indicates a potential scam.",
-            
-            "\n\nYour detailed analysis should include:"
-            "\n1. A determination of scam likelihood (Low, Medium, or High) with thorough explanation"
-            "\n2. A comprehensive assessment of the lease as a whole - provide DETAILED analysis of at least 300 words"
-            "\n3. A detailed breakdown of EACH concerning clause with:"
-            "\n   - The exact text from the lease"
-            "\n   - A simplified explanation in plain language"
-            "\n   - Why this clause is concerning or problematic"
-            "\n   - Whether it might be illegal or unenforceable in most jurisdictions"
-            "\n   - Specific recommendations for the tenant regarding this clause"
-            "\n4. At least 6-8 specific questions the tenant should ask before signing, with explanations of why each question is important"
-            "\n5. Actionable recommendations - specific actions the tenant should take based on your analysis"
-
-
-            "All of the analysis should be in {language}. If the language is not English, translate the analysis into English before returning the response."
+            "Analyze this rental listing for potential scams and issues. Return a JSON response with:",
+            "1. scam_likelihood (Low/Medium/High)",
+            "2. explanation (brief analysis)",
+            "3. concerning_clauses (list issues)",
+            "4. suggested_questions (key questions)",
+            "5. action_items (next steps)",
+            "\nBe concise but thorough."
         ]
         
         # Add context information if available
         if listing_url:
-            prompt_parts.append(f"\n\nListing URL: {listing_url}")
+            prompt_parts.append(f"\nURL: {listing_url}")
         if property_address:
-            prompt_parts.append(f"\nProperty Address: {property_address}")
+            prompt_parts.append(f"\nAddress: {property_address}")
         
         # Add the document content
         if document_content:
-            # Limit document size if it's very large
-            doc_to_analyze = document_content
-            if len(document_content) > 15000:
-                doc_to_analyze = document_content[:15000] + "\n...[document truncated due to length]..."
-                
-            prompt_parts.append(f"\n\nLease Document:\n{doc_to_analyze}")
-        else:
-            prompt_parts.append("\n\nNote: No lease document was provided.")
+            prompt_parts.append(f"\nContent:\n{document_content}")
         
-        # Request structured JSON output
+        # Request JSON output
         prompt_parts.append(
-            "\n\nPlease return your analysis in the following JSON format, wrapped in triple backticks:"
-            "\n```json"
+            "\nRespond in this JSON format:"
             "\n{"
-            '\n  "scam_likelihood": "Low|Medium|High",'
-            '\n  "explanation": "Your detailed 300+ word explanation here with thorough assessment of the entire lease...",'
-            '\n  "concerning_clauses": ['
-            '\n    {'
-            '\n      "original_text": "Exact clause text from document...",'
-            '\n      "simplified_text": "Simplified explanation in plain language...",'
-            '\n      "is_concerning": true,'
-            '\n      "reason": "Detailed explanation of why this clause is concerning, potentially illegal, or unfair..."'
-            '\n    },'
-            '\n    {'
-            '\n      "original_text": "Another concerning clause...",'
-            '\n      "simplified_text": "Plain language explanation...",'
-            '\n      "is_concerning": true,'
-            '\n      "reason": "Explanation of the issue with this clause..."'
-            '\n    }'
-            '\n  ],'
-            '\n  "suggested_questions": ['
-            '\n    "Specific question about a concerning term?",'
-            '\n    "Another important question to ask?",'
-            '\n    "A question about rights or responsibilities?",'
-            '\n    "A question about a potentially unfair term?",'
-            '\n    "A question about missing information?",'
-            '\n    "A question about unclear language or terms?",'
-            '\n    "A question about legal rights and protections?",'
-            '\n    "A question about responsibilities not mentioned in the lease?"'
-            '\n  ],'
-            '\n  "action_items": ['
-            '\n    "Specific action the tenant should take, like \'Request written clarification about clause X\'",'
-            '\n    "Another action recommendation, like \'Verify the landlord is the actual property owner\'",'
-            '\n    "A third action recommendation, like \'Consult with a tenant rights attorney about clause Y\'"'
-            '\n  ]'
-            '\n}'
-            "\n```"
-            "\n\nBe extremely thorough in your analysis. Identify ALL concerning clauses, not just the most obvious ones."
-            "\nIf you find potentially illegal or highly unfair terms, be sure to highlight them prominently."
-            "\nInclude at least 6-8 detailed, specific questions tailored to the exact issues in this lease document."
-            "\nIf you can't find any concerning clauses, explain thoroughly why the lease appears to be fair and standard."
-            "\nVERY IMPORTANT: Your response MUST be valid JSON that can be parsed programmatically - check that all quotes and braces match."
-            "\nDO NOT include explanatory text outside the JSON block."
-            "\nDO NOT nest multiple levels of quotes that would break JSON parsing."
-            "\nEnsure your response is correctly formatted JSON and can be parsed directly. All text should be in {language}."
+            '\n"scam_likelihood": "Low|Medium|High",'
+            '\n"explanation": "brief analysis",'
+            '\n"concerning_clauses": [{"original_text": "issue", "simplified_text": "explanation", "reason": "why concerning"}],'
+            '\n"suggested_questions": ["question1", "question2"],'
+            '\n"action_items": ["action1", "action2"]'
+            "\n}"
         )
         
         return "\n".join(prompt_parts)
@@ -619,10 +624,11 @@ class GeminiService:
     def _get_generation_config():
         """Get generation configuration for Gemini."""
         return {
-            "temperature": 0.1,  # Lower temperature for more focused, predictable responses
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 4096,  # Increased output length for more detailed analysis
+            "temperature": 0.3,  # More focused responses
+            "top_p": 0.8,
+            "top_k": 20,
+            "max_output_tokens": 2048,  # Reduced token limit
+            "stop_sequences": ["}"]  # Stop after JSON completion
         }
     
     @staticmethod

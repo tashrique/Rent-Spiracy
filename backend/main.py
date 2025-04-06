@@ -49,16 +49,17 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(analysis.router)
-app.include_router(file_upload.router)
-app.include_router(documents.router)
+app.include_router(analysis.router, prefix="/api")
+app.include_router(file_upload.router, prefix="/api")
+app.include_router(documents.router, prefix="/api")
 
 
 @app.on_event("startup")
 async def startup_db_client():
     logger.info("Starting Rent-Spiracy API")
     try:
-        await Database.connect_db()
+        db_instance = await Database.get_instance()
+        await db_instance.connect_db()
         logger.info("Connected to database")
     except Exception as e:
         logger.error(f"Failed to connect to database: {str(e)}")
@@ -69,7 +70,8 @@ async def startup_db_client():
 async def shutdown_db_client():
     logger.info("Shutting down Rent-Spiracy API")
     try:
-        await Database.close_db()
+        db_instance = await Database.get_instance()
+        await db_instance.close_db()
         logger.info("Disconnected from database")
     except Exception as e:
         logger.error(f"Error during database disconnect: {str(e)}")

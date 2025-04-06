@@ -1,15 +1,17 @@
 from app.models.rental import RentalAnalysisRequest, AnalysisResult, ClauseAnalysis, ScamLikelihood, RiskLevel, TrustworthinessGrade
 from app.utils.db import get_analyses_collection, Database
-from app.utils.pdf_parser import extract_text_from_pdf
 from app.utils.gemini_service import GeminiService
+from app.utils.jina_service import JinaService
+from app.utils.llm_utils import format_analysis_response
 from datetime import datetime
 import uuid
 import re
 import json
-import random
-import requests
-from typing import Optional, Dict, Any
+import logging
+import asyncio
+from typing import Dict, Any, Optional, List
 
+logger = logging.getLogger("rent-spiracy.analysis")
 
 class AnalysisService:
     """Service for handling rental analysis."""
@@ -20,197 +22,136 @@ class AnalysisService:
         Analyze a rental based on the provided information.
         Flow:
         1. If document_content provided: Analyze the document directly
-        2. If listing_url provided: Scrape webpage and get random lease from DB
-        3. If property_address provided: Google search for address, find listing, get random lease
+        2. If listing_url provided: Use Jina to extract and analyze content
+        3. If property_address provided: Search for listing, use Jina to extract and analyze
         """
-        # Validate input
-        request.validate_input()
-
-        # Generate a unique ID for this analysis
         analysis_id = str(uuid.uuid4())
+        logger.info(f"Starting analysis with ID: {analysis_id}")
         
-        document_content = ""
+        document_content = request.document_content
         property_info = {}
         
         try:
-            # FLOW PATH 1: User uploaded a lease document
-            if request.document_content:
-                document_content = request.document_content
-                print(f"User uploaded a lease document: {len(document_content)} chars")
+            # If URL is provided, extract content using Jina
+            if request.listing_url:
+                logger.info(f"User provided listing URL: {request.listing_url}")
                 
-            # FLOW PATH 2: User provided listing URL
-            elif request.listing_url:
-                print(f"User provided listing URL: {request.listing_url}")
-                # Scrape webpage for information (simplified)
-                try:
-                    response = requests.get(request.listing_url, timeout=10)
-                    property_info = {"source": "listing_url", "url": request.listing_url}
-                    if response.status_code == 200:
-                        property_info["page_content"] = response.text[:5000]  # Just first 5000 chars for demo
-                except Exception as e:
-                    print(f"Error scraping listing URL: {str(e)}")
-                    property_info["error"] = str(e)
-                
-                # Get random lease from database
-                document_content = await AnalysisService._get_random_lease_document()
-                
-            # FLOW PATH 3: User provided property address
-            elif request.property_address:
-                print(f"User provided property address: {request.property_address}")
-                property_info = {"source": "property_address", "address": request.property_address}
-                
-                # Google search for the address to find listings
-                listing_url = await AnalysisService._search_property_listings(request.property_address)
-                
-                if listing_url:
-                    property_info["found_listing"] = listing_url
-                    try:
-                        response = requests.get(listing_url, timeout=10)
-                        if response.status_code == 200:
-                            property_info["page_content"] = response.text[:500]  # Just first 500 chars for demo
-                    except Exception as e:
-                        print(f"Error scraping found listing: {str(e)}")
-                        property_info["error"] = str(e)
-                
-                # Get random lease from database
-                document_content = await AnalysisService._get_random_lease_document()
+                # Extract content using Jina's reader API
+                jina_content = await JinaService.extract_content(request.listing_url)
+                if jina_content:
+                    # Format the content for analysis
+                    document_content = (
+                        f"Title: {jina_content.get('title', '')}\n"
+                        f"Price: {jina_content.get('price', 'None')}\n"
+                        f"Location: {jina_content.get('address', 'None')}\n"
+                        f"Description: {jina_content.get('text', '')}"
+                    )
+                    logger.info(f"Successfully extracted content using Jina: {len(document_content)} chars")
+                    
+                    # Add a delay before making the Gemini API call
+                    await asyncio.sleep(2)  # 2-second delay between API calls
+                else:
+                    logger.error("Failed to extract content from URL")
+                    return AnalysisResult(
+                        id=analysis_id,
+                        scam_likelihood="High",
+                        explanation="Unable to extract content from the provided URL. This could indicate a potential scam or technical issues.",
+                        simplified_clauses=[],
+                        suggested_questions=[
+                            "Why is the content not accessible?",
+                            "Can you verify this is a legitimate listing?",
+                            "Can you provide an alternative way to view the property details?"
+                        ],
+                        action_items=[
+                            "Verify the listing exists and is accessible",
+                            "Request direct contact with the property manager",
+                            "Ask for alternative listing links or documentation"
+                        ],
+                        created_at=datetime.now()
+                    )
             
-            # Make sure we have some document content for analysis
             if not document_content:
-                document_content = "No document content could be retrieved."
-            
-            # Log analysis request
-            print(f"Analyzing rental - URL: {request.listing_url}, Address: {request.property_address}, Document length: {len(document_content)} chars")
-            
-            # Call Gemini for analysis
-            gemini_response = await GeminiService.analyze_rental_document(
-                document_content=document_content,
-                listing_url=request.listing_url or property_info.get("found_listing"),
-                property_address=request.property_address
-            )
-            
-            # Ensure we get a valid response, not None
-            if not gemini_response:
+                raise ValueError("No content provided for analysis")
+                
+            # Get analysis from Gemini
+            try:
+                gemini_response = await GeminiService.analyze_rental_document(
+                    document_content=document_content,
+                    listing_url=request.listing_url or property_info.get("found_listing"),
+                    property_address=request.property_address
+                )
+                logger.info("Received response from Gemini")
+            except Exception as gemini_error:
+                logger.error(f"Gemini API error: {str(gemini_error)}")
+                # For any Gemini errors, provide basic analysis
                 gemini_response = {
-                    "raw_response": "Failed to get response from Gemini API",
+                    "raw_response": f"Error from Gemini API: {str(gemini_error)}",
                     "scam_likelihood": "Medium",
-                    "explanation": "The system was unable to analyze this document properly. Please try again.",
+                    "explanation": (
+                        "The AI analysis service encountered an error. "
+                        "Here's what we found from the listing:\n\n"
+                    ) + document_content[:500] + "...",
                     "concerning_clauses": [],
-                    "questions": [],
-                    "action_items": []
+                    "questions": [
+                        "Can you verify the property ownership?",
+                        "Can you view the property in person?",
+                        "Are there any fees required before viewing?",
+                        "What is included in the rent?",
+                        "What is the lease term?"
+                    ],
+                    "action_items": [
+                        "Verify the property exists and is actually for rent",
+                        "Never send money without viewing the property",
+                        "Research typical rental prices in the area",
+                        "Get all agreements in writing",
+                        "Trust your instincts if something seems off"
+                    ]
                 }
             
+            if not gemini_response:
+                raise ValueError("No response received from AI services")
+            
             raw_response = gemini_response.get("raw_response", "")
-            print(f"Received response from Gemini: {len(raw_response)} chars")
-            # print(f"Raw response: {raw_response}")
+            logger.info(f"Processing Gemini response: {len(raw_response)} chars")
             
-            # Initialize default values for variables to ensure they're always defined
-            scam_likelihood = ScamLikelihood.MEDIUM
-            explanation = "Analysis completed"
-            clauses = []
-            questions = []
-            action_items = []
+            # Format the response
+            response = format_analysis_response(gemini_response)
             
-            # If we have pre-parsed data from Gemini service, use it
-            if "concerning_clauses" in gemini_response and isinstance(gemini_response["concerning_clauses"], list):
-                print("Using pre-parsed data from Gemini service")
+            # Create the analysis result
+            analysis_result = AnalysisResult(
+                id=analysis_id,
+                scam_likelihood=response["scam_likelihood"],
+                trustworthiness_score=response["trustworthiness_score"],
+                trustworthiness_grade=response["trustworthiness_grade"],
+                risk_level=response["risk_level"],
+                explanation=response["explanation"],
+                simplified_clauses=response["simplified_clauses"],
+                suggested_questions=response["suggested_questions"],
+                action_items=response["action_items"],
+                created_at=datetime.now(),
+                raw_response=raw_response
+            )
+            
+            # Store in database
+            try:
+                analyses = await get_analyses_collection()
+                result_dict = analysis_result.dict()
+                result_dict["scam_likelihood"] = response["scam_likelihood"]
+                result_dict["risk_level"] = response["risk_level"]
+                result_dict["trustworthiness_grade"] = response["trustworthiness_grade"]
+                result_dict["created_at"] = result_dict["created_at"].isoformat()
                 
-                # Just use the pre-parsed data directly without excessive text cleaning
-                parsed_clauses = []
-                for clause_data in gemini_response["concerning_clauses"]:
-                    # Skip if missing required fields
-                    if not clause_data.get("original_text") or not clause_data.get("simplified_text"):
-                        continue
-                    
-                    parsed_clauses.append(ClauseAnalysis(
-                        text=clause_data.get("original_text", ""),
-                        simplified_text=clause_data.get("simplified_text", ""),
-                        is_concerning=clause_data.get("is_concerning", True),
-                        reason=clause_data.get("reason", "")
-                    ))
-                
-                scam_likelihood_str = gemini_response.get("scam_likelihood", "Medium")
-                if scam_likelihood_str.capitalize() in ["Low", "Medium", "High"]:
-                    scam_likelihood = getattr(ScamLikelihood, scam_likelihood_str.upper())
-                else:
-                    scam_likelihood = ScamLikelihood.MEDIUM
-                
-                explanation = gemini_response.get("explanation", "Analysis completed.")
-                questions = gemini_response.get("questions", [])
-                action_items = gemini_response.get("action_items", [])
-                clauses = parsed_clauses
-                
-                # Print what we parsed
-                print(f"Parsed likelihood: {scam_likelihood}")
-                print(f"Found {len(clauses)} concerning clauses")
-                print(f"Found {len(questions)} suggested questions")
-                
-                # If no concerning clauses were found but we have a likelihood and explanation
-                if not clauses:
-                    print("No concerning clauses found, checking for content")
-                    
-                    # Add a placeholder clause
-                    clauses.append(ClauseAnalysis(
-                        text="General Lease Review",
-                        simplified_text="While no specific concerning clauses were identified, always review your lease thoroughly before signing.",
-                        is_concerning=False,
-                        reason="No specific concerning clauses were identified in the analysis."
-                    ))
-                
-                # Calculate trustworthiness metrics based on analysis
-                trustworthiness_score, trustworthiness_grade, risk_level = AnalysisService._calculate_trustworthiness(
-                    scam_likelihood.name, 
-                    len(clauses)
-                )
-                
-                # Store analysis result in database
-                analysis_result = AnalysisResult(
-                    id=analysis_id,
-                    scam_likelihood=scam_likelihood,
-                    trustworthiness_score=trustworthiness_score,
-                    trustworthiness_grade=trustworthiness_grade,
-                    risk_level=risk_level,
-                    explanation=explanation,
-                    simplified_clauses=clauses,
-                    suggested_questions=questions,
-                    action_items=action_items or [],
-                    created_at=datetime.now(),
-                    raw_response=raw_response  # Include the raw response for the frontend to use directly
-                )
-                
-                # Store in database (will implement this properly)
-                try:
-                    analyses = await get_analyses_collection()
-                    result_dict = analysis_result.dict()
-                    
-                    # Convert enum values to strings for MongoDB
-                    result_dict["scam_likelihood"] = scam_likelihood.value
-                    result_dict["risk_level"] = risk_level
-                    result_dict["trustworthiness_grade"] = trustworthiness_grade
-                    
-                    # Convert datetime to ISO format
-                    result_dict["created_at"] = result_dict["created_at"].isoformat()
-                    
-                    # Insert into database
-                    print(f"Storing analysis result with ID: {analysis_id}")
-                    await analyses.insert_one(result_dict)
-                except Exception as e:
-                    print(f"Error storing analysis in database: {str(e)}")
-                    
-                return analysis_result
+                logger.info(f"Storing analysis result with ID: {analysis_id}")
+                await analyses.insert_one(result_dict)
+            except Exception as e:
+                logger.error(f"Error storing analysis in database: {str(e)}")
+            
+            return analysis_result
             
         except Exception as e:
-            print(f"Error during analysis: {str(e)}")
-            # Return a basic error response
-            return AnalysisResult(
-                id=str(uuid.uuid4()),
-                scam_likelihood=ScamLikelihood.MEDIUM,
-                explanation=f"An error occurred during analysis: {str(e)}",
-                simplified_clauses=[],
-                suggested_questions=[],
-                created_at=datetime.now(),
-                raw_response=f"Error: {str(e)}"
-            )
+            logger.error(f"Error in analyze_rental: {str(e)}")
+            logger.exception(e)
+            raise
 
     @staticmethod
     def _calculate_trustworthiness(scam_likelihood: str, concerning_clauses_count: int) -> tuple:
@@ -367,7 +308,7 @@ class AnalysisService:
                 json_str = json_match.group(1)
                 try:
                     data = json.loads(json_str)
-                    print(f"Successfully parsed JSON code block with {len(json_str)} chars")
+                    logger.info(f"Successfully parsed JSON code block with {len(json_str)} chars")
                     
                     # Validate that at least one key field is present
                     if any(k in data for k in ['scam_likelihood', 'explanation', 'concerning_clauses', 'clauses']):
@@ -378,10 +319,10 @@ class AnalysisService:
                             "questions": data.get('suggested_questions', data.get('questions', [])),
                             "action_items": data.get('action_items', [])
                         }
-                        print(f"Extracted data with {len(result.get('clauses', []))} clauses and {len(result.get('questions', []))} questions")
+                        logger.info(f"Extracted data with {len(result.get('clauses', []))} clauses and {len(result.get('questions', []))} questions")
                         return result
                 except json.JSONDecodeError as e:
-                    print(f"Found JSON block but failed to parse it: {e}")
+                    logger.error(f"Found JSON block but failed to parse it: {e}")
             
             # Try to find JSON blocks without language specifier
             json_match = re.search(r'```\s*({\s*".*?})\s*```', response_text, re.DOTALL)
@@ -389,7 +330,7 @@ class AnalysisService:
                 json_str = json_match.group(1)
                 try:
                     data = json.loads(json_str)
-                    print(f"Successfully parsed unmarked JSON code block with {len(json_str)} chars")
+                    logger.info(f"Successfully parsed unmarked JSON code block with {len(json_str)} chars")
                     
                     # Validate that at least one key field is present
                     if any(k in data for k in ['scam_likelihood', 'explanation', 'concerning_clauses', 'clauses']):
@@ -400,10 +341,10 @@ class AnalysisService:
                             "questions": data.get('suggested_questions', data.get('questions', [])),
                             "action_items": data.get('action_items', [])
                         }
-                        print(f"Extracted data with {len(result.get('clauses', []))} clauses and {len(result.get('questions', []))} questions")
+                        logger.info(f"Extracted data with {len(result.get('clauses', []))} clauses and {len(result.get('questions', []))} questions")
                         return result
                 except json.JSONDecodeError:
-                    print("Found unmarked JSON block but failed to parse it")
+                    logger.error("Found unmarked JSON block but failed to parse it")
             
             # Look for JSON objects with more flexible pattern
             potential_json_blocks = re.findall(r'({[\s\S]*?})', response_text)
@@ -411,7 +352,7 @@ class AnalysisService:
                 try:
                     if len(json_str) > 50:  # Only try to parse substantial JSON blocks
                         data = json.loads(json_str)
-                        print(f"Found embedded JSON, attempting to extract from {len(json_str)} chars")
+                        logger.info(f"Found embedded JSON, attempting to extract from {len(json_str)} chars")
                         
                         # Check for required fields using various common naming patterns
                         fields_found = []
@@ -461,7 +402,7 @@ class AnalysisService:
                                 "questions": questions,
                                 "action_items": action_items
                             }
-                            print(f"Extracted embedded JSON with {len(clauses)} clauses and {len(questions)} questions")
+                            logger.info(f"Extracted embedded JSON with {len(clauses)} clauses and {len(questions)} questions")
                             return result
                 except (json.JSONDecodeError, AttributeError, KeyError) as e:
                     continue  # Try the next potential JSON block
@@ -498,11 +439,11 @@ class AnalysisService:
             
             # If we found at least some structured data, return it
             if structured_data.get("scam_likelihood") or structured_data.get("explanation"):
-                print(f"Extracted data using structured markup")
+                logger.info(f"Extracted data using structured markup")
                 return structured_data
                 
         except Exception as e:
-            print(f"Error extracting JSON from response: {e}")
+            logger.error(f"Error extracting JSON from response: {e}")
             
         return None
 
@@ -520,7 +461,7 @@ class AnalysisService:
         action_items = []
         
         try:
-            print("Starting regex parsing of Gemini response")
+            logger.info("Starting regex parsing of Gemini response")
             
             # Look for a clear scam likelihood indicator - try multiple formats
             likelihood_patterns = [
@@ -542,7 +483,7 @@ class AnalysisService:
                         scam_likelihood = ScamLikelihood.MEDIUM
                     elif likelihood_text == "High":
                         scam_likelihood = ScamLikelihood.HIGH
-                    print(f"Extracted scam likelihood: {likelihood_text}")
+                    logger.info(f"Extracted scam likelihood: {likelihood_text}")
                     break
             
             # Try to extract explanation section
@@ -561,7 +502,7 @@ class AnalysisService:
                     explanation_text = explanation_match.group(1).strip()
                     if len(explanation_text) > 50:
                         explanation = explanation_text
-                        print(f"Extracted explanation ({len(explanation)} chars)")
+                        logger.info(f"Extracted explanation ({len(explanation)} chars)")
                         break
             
             # Extract sections based on common headers
@@ -582,7 +523,7 @@ class AnalysisService:
                     section_content = section_match.group(1).strip()
                     if section_content:
                         sections[section_name] = section_content
-                        print(f"Found {section_name} section ({len(section_content)} chars)")
+                        logger.info(f"Found {section_name} section ({len(section_content)} chars)")
             
             # Parse clauses from extracted section
             if "clauses" in sections:
@@ -624,7 +565,7 @@ class AnalysisService:
                         reason=f"Identified in clause analysis"
                     ))
                 
-                print(f"Extracted {len(clauses)} clauses")
+                logger.info(f"Extracted {len(clauses)} clauses")
             
             # Parse questions from extracted section
             if "questions" in sections:
@@ -654,7 +595,7 @@ class AnalysisService:
                     if clean_q not in questions:
                         questions.append(clean_q)
                 
-                print(f"Extracted {len(questions)} questions")
+                logger.info(f"Extracted {len(questions)} questions")
             
             # Parse action items from extracted section
             if "actions" in sections:
@@ -670,7 +611,7 @@ class AnalysisService:
                 # Clean up action items
                 action_items = [a.replace('\\n', '\n').replace('\\"', '"').replace('\\\'', '\'') for a in action_items]
                 
-                print(f"Extracted {len(action_items)} action items")
+                logger.info(f"Extracted {len(action_items)} action items")
             
             # If no clauses were found but we have a likelihood and explanation, check if the explanation 
             # suggests why there are no concerning clauses
@@ -684,7 +625,7 @@ class AnalysisService:
                         is_concerning=False,
                         reason="The analysis indicates this is a standard lease agreement without concerning clauses."
                     ))
-                    print("Added default clause for standard lease")
+                    logger.info("Added default clause for standard lease")
                 # Check if explanation indicates a scam/suspicious document
                 elif re.search(r"(suspicious|fraud|scam|concerning|problematic|issue|red flag)", explanation, re.IGNORECASE):
                     clauses.append(ClauseAnalysis(
@@ -693,7 +634,7 @@ class AnalysisService:
                         is_concerning=True,
                         reason="The analysis indicates potential issues with this document."
                     ))
-                    print("Added default clause for suspicious document")
+                    logger.info("Added default clause for suspicious document")
             
             # If we still have no clauses, provide a generic placeholder
             if not clauses:
@@ -703,7 +644,7 @@ class AnalysisService:
                     is_concerning=False,
                     reason="Unable to extract specific clauses from the document."
                 ))
-                print("Added fallback placeholder clause")
+                logger.info("Added fallback placeholder clause")
             
             # If we have no questions, provide some generic ones based on scam likelihood
             if not questions:
@@ -723,7 +664,7 @@ class AnalysisService:
                         "What is the policy on early lease termination?",
                         "Are pets allowed? If so, are there additional fees or deposits?"
                     ]
-                print(f"Added {len(questions)} default questions")
+                logger.info(f"Added {len(questions)} default questions")
             
             # If we have no action items, provide defaults based on scam likelihood
             if not action_items:
@@ -748,12 +689,12 @@ class AnalysisService:
                         "Review the lease agreement thoroughly before signing",
                         "Prepare questions about any unclear terms"
                     ]
-                print(f"Added {len(action_items)} default action items")
+                logger.info(f"Added {len(action_items)} default action items")
             
             return scam_likelihood, explanation, clauses, questions, action_items
             
         except Exception as e:
-            print(f"Error in regex parsing: {str(e)}")
+            logger.error(f"Error in regex parsing: {str(e)}")
             # Return defaults if parsing fails
             return scam_likelihood, explanation, clauses, questions, action_items
 
@@ -856,19 +797,49 @@ Landlord: ______________________ Date: ________"""
     @staticmethod
     async def _search_property_listings(address: str) -> Optional[str]:
         """
-        Perform a search for property listings based on the address.
-        This would use Google Search API in production, but for this demo
-        it returns a mock listing URL.
+        Search for property listings based on address.
+        Currently just returns the address as a URL for testing.
+        In a real implementation, this would:
+        1. Search real estate websites
+        2. Return the most relevant listing URL
         """
-        print(f"Searching for property listings with address: {address}")
-        # In a real implementation, this would call Google Search API
-        # For demo, return a fake listing URL
-        mock_listings = [
-            f"https://www.zillow.com/homes/for_rent/{address.replace(' ', '-')}",
-            f"https://www.apartments.com/search/{address.replace(' ', '-')}",
-            f"https://www.craigslist.org/search/apa?query={address.replace(' ', '+')}"
-        ]
-        return random.choice(mock_listings)
+        # For now, just return a mock URL
+        return f"https://example.com/listing/{address.replace(' ', '-')}"
+
+    @staticmethod
+    async def _scrape_webpage_content(url: str) -> str:
+        """
+        Scrape content from a webpage using Jina's reader API.
+        
+        Args:
+            url: The URL to scrape
+            
+        Returns:
+            Extracted text content from the webpage
+        """
+        try:
+            # Extract content using Jina
+            content = await JinaService.extract_content(url)
+            
+            # Combine title and text
+            full_content = f"Title: {content['title']}\n\n"
+            
+            # Add price if available
+            if content['metadata']['price']:
+                full_content += f"Price: ${content['metadata']['price']}\n\n"
+                
+            # Add address if available
+            if content['metadata']['address']:
+                full_content += f"Address: {content['metadata']['address']}\n\n"
+                
+            # Add main text content
+            full_content += f"Description: {content['text']}"
+            
+            return full_content
+            
+        except Exception as e:
+            logger.error(f"Error scraping webpage: {str(e)}")
+            raise Exception(f"Failed to extract content from URL: {str(e)}")
 
     @classmethod
     def _process_gemini_response(cls, raw_response: str) -> Dict[str, Any]:
@@ -1016,3 +987,77 @@ Landlord: ______________________ Date: ________"""
             risk_level = RiskLevel.VERY_HIGH_RISK
             
         return score, grade, risk_level
+
+    @staticmethod
+    async def analyze_rental_listing(
+        url: str,
+        language: str = "english",
+        voice_output: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Analyze a rental listing for potential scams and provide insights.
+        Uses Jina for content extraction and Gemini for scam analysis.
+        
+        Args:
+            url (str): The URL of the rental listing
+            language (str): The language for the analysis (default: "english")
+            voice_output (bool): Whether to generate voice output (default: False)
+            
+        Returns:
+            Dict[str, Any]: Analysis results including scam likelihood, explanation, and recommendations
+        """
+        try:
+            # Check if URL is from a site with known captcha issues
+            if any(domain in url.lower() for domain in ['zillow.com', 'trulia.com']):
+                return {
+                    "error": "This website requires human verification. Please try copying and pasting the listing content directly.",
+                    "status": "error",
+                    "code": "CAPTCHA_DETECTED"
+                }
+                
+            content = await JinaService.extract_content(url)
+            if not content:
+                return {
+                    "error": "Unable to extract content. This could be due to website restrictions or invalid URL.",
+                    "status": "error",
+                    "code": "EXTRACTION_FAILED"
+                }
+
+            # Format the content for Gemini analysis
+            formatted_content = f"""
+            Title: {content.get('title', 'N/A')}
+            Price: {content.get('price', 'N/A')}
+            Location: {content.get('address', 'N/A')}
+            Description: {content.get('text', 'N/A')}
+            """
+
+            # Get scam analysis from Gemini
+            analysis = await GeminiService.analyze_rental_document(formatted_content)
+            
+            # Format the response
+            response = format_analysis_response(analysis)
+            
+            # Add voice output if requested
+            if voice_output:
+                voice_service = VoiceService()
+                voice_url = await voice_service.generate_voice_output(
+                    response["explanation"],
+                    language
+                )
+                response["voice_url"] = voice_url
+            
+            return response
+
+        except Exception as e:
+            logger.error(f"Error analyzing rental listing: {str(e)}")
+            return {
+                "error": "An error occurred while analyzing the listing",
+                "scam_likelihood": "Unknown",
+                "trustworthiness_score": 0,
+                "trustworthiness_grade": "F",
+                "risk_level": "Unknown Risk",
+                "explanation": f"Error: {str(e)}",
+                "concerning_clauses": [],
+                "questions": [],
+                "action_items": []
+            }

@@ -1,0 +1,58 @@
+RESIDENTIAL LEASE AGREEMENT
+
+This Residential Lease Agreement ("Lease") is made and entered into on this 1st day of March, 2024, by and between:
+
+LANDLORD: John Smith
+ADDRESS: 123 Main Street, San Francisco, CA 94105
+PHONE: (555) 123-4567
+EMAIL: john.smith@example.com
+
+TENANT: Jane Doe
+ADDRESS: 456 Oak Avenue, San Francisco, CA 94110
+PHONE: (555) 987-6543
+EMAIL: jane.doe@example.com
+
+1. PREMISES
+Landlord rents to Tenant and Tenant rents from Landlord the premises located at:
+789 Market Street, Apartment 4B, San Francisco, CA 94103
+
+2. TERM
+The term of this Lease shall be for a period of 12 months, commencing on March 1, 2024, and ending on February 28, 2025.
+
+3. RENT
+Tenant shall pay to Landlord a monthly rent of $3,500.00, payable in advance on the first day of each month. Rent shall be paid by electronic transfer to the following account:
+Bank: Wells Fargo
+Account Number: 1234567890
+Routing Number: 121000248
+
+4. SECURITY DEPOSIT
+Tenant has deposited with Landlord the sum of $3,500.00 as security for the performance of Tenant's obligations under this Lease.
+
+5. UTILITIES
+Tenant shall be responsible for all utilities including electricity, gas, water, internet, and cable TV.
+
+6. MAINTENANCE AND REPAIRS
+Tenant shall maintain the premises in a clean and sanitary condition. Landlord shall be responsible for structural repairs and maintenance of the building systems.
+
+7. USE OF PREMISES
+The premises shall be used only as a private residence for Tenant and Tenant's immediate family.
+
+8. PETS
+No pets are allowed on the premises without Landlord's prior written consent.
+
+9. SUBLETTING AND ASSIGNMENT
+Tenant shall not sublet the premises or assign this Lease without Landlord's prior written consent.
+
+10. DEFAULT
+If Tenant fails to pay rent when due or otherwise breaches this Lease, Landlord may terminate this Lease upon 3 days' written notice.
+
+11. GOVERNING LAW
+This Lease shall be governed by and construed in accordance with the laws of the State of California.
+
+IN WITNESS WHEREOF, the parties have executed this Lease as of the date first written above.
+
+LANDLORD: _________________________
+John Smith
+
+TENANT: _________________________
+Jane Doe 

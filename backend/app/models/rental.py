@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -21,8 +21,8 @@ class RentalAnalysisRequest(BaseModel):
     language: Language = Language.ENGLISH
     voice_output: bool = False
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "listing_url": "https://example.com/rental/123",
                 "property_address": "123 Main St, Anytown, NY 10001",
@@ -31,6 +31,7 @@ class RentalAnalysisRequest(BaseModel):
                 "voice_output": False
             }
         }
+    )
 
     def validate_input(self):
         """Validate that at least one input field is provided."""
@@ -89,8 +90,8 @@ class AnalysisResult(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     raw_response: Optional[str] = None  # Raw response from LLM for frontend processing
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "1680123456.789",
                 "scam_likelihood": "Low",
@@ -116,3 +117,4 @@ class AnalysisResult(BaseModel):
                 "created_at": "2023-04-01T12:00:00"
             }
         }
+    )
