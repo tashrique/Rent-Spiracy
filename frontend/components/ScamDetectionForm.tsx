@@ -47,6 +47,7 @@ export default function ScamDetectionForm({
   const [analysisStage, setAnalysisStage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const t =
     (translations[language as keyof typeof translations] as TranslationType) ||
@@ -78,13 +79,18 @@ export default function ScamDetectionForm({
       // Check file size (max 10MB)
       const maxSize = 10 * 1024 * 1024; // 10MB in bytes
       if (file.size > maxSize) {
-        setError(
-          `File too large (max 10MB). This file is ${(
-            file.size /
-            1024 /
-            1024
-          ).toFixed(2)}MB.`
-        );
+        const errorMsg = `File too large (max 10MB). This file is ${(
+          file.size /
+          1024 /
+          1024
+        ).toFixed(2)}MB.`;
+        setError(errorMsg);
+
+        // Announce error to screen readers
+        const announcer = document.getElementById("announcer");
+        if (announcer) {
+          announcer.textContent = `Error: ${errorMsg}`;
+        }
         return;
       }
 
@@ -99,9 +105,15 @@ export default function ScamDetectionForm({
 
           // Most encrypted PDFs have "/Encrypt" in their header
           if (pdfContent.includes("/Encrypt")) {
-            setError(
-              "This PDF appears to be password-protected. Please upload an unprotected document."
-            );
+            const errorMsg =
+              "This PDF appears to be password-protected. Please upload an unprotected document.";
+            setError(errorMsg);
+
+            // Announce error to screen readers
+            const announcer = document.getElementById("announcer");
+            if (announcer) {
+              announcer.textContent = `Error: ${errorMsg}`;
+            }
             return;
           }
         } catch (err) {
@@ -113,15 +125,28 @@ export default function ScamDetectionForm({
       setSelectedFiles((prev) => [...prev, file]);
       setUploadProgress(0);
       setAnalysisStage(null);
+
+      // Announce to screen readers
+      const announcer = document.getElementById("announcer");
+      if (announcer) {
+        announcer.textContent = `File ${file.name} added successfully.`;
+      }
     }
   };
 
   const removeFile = (index: number) => {
+    const fileName = selectedFiles[index]?.name || "File";
     setSelectedFiles((prev) => {
       const newFiles = [...prev];
       newFiles.splice(index, 1);
       return newFiles;
     });
+
+    // Announce to screen readers
+    const announcer = document.getElementById("announcer");
+    if (announcer) {
+      announcer.textContent = `${fileName} removed.`;
+    }
   };
 
   const handleCapturePhoto = () => {
@@ -135,6 +160,12 @@ export default function ScamDetectionForm({
 
     if (selectedFiles.length === 0) {
       setError(t.atLeastOneField);
+
+      // Announce error to screen readers
+      const announcer = document.getElementById("announcer");
+      if (announcer) {
+        announcer.textContent = `Error: ${t.atLeastOneField}`;
+      }
       return;
     }
 
@@ -142,6 +173,12 @@ export default function ScamDetectionForm({
     setError(null);
     setUploadProgress(0);
     setAnalysisStage(t.analysisStage1);
+
+    // Announce to screen readers that submission started
+    const announcer = document.getElementById("announcer");
+    if (announcer) {
+      announcer.textContent = t.analysisStage1;
+    }
 
     const apiLanguage = validateLanguage(language) as
       | "english"
@@ -159,12 +196,35 @@ export default function ScamDetectionForm({
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           const newProgress = prev + Math.random() * 15;
+          let newStage = analysisStage;
+
           if (newProgress > 25 && newProgress <= 50) {
-            setAnalysisStage(t.analysisStage2);
+            newStage = t.analysisStage2;
+            setAnalysisStage(newStage);
+
+            // Announce stage change to screen readers
+            const announcer = document.getElementById("announcer");
+            if (announcer) {
+              announcer.textContent = newStage;
+            }
           } else if (newProgress > 50 && newProgress <= 75) {
-            setAnalysisStage(t.analysisStage3);
+            newStage = t.analysisStage3;
+            setAnalysisStage(newStage);
+
+            // Announce stage change to screen readers
+            const announcer = document.getElementById("announcer");
+            if (announcer) {
+              announcer.textContent = newStage;
+            }
           } else if (newProgress > 75) {
-            setAnalysisStage(t.analysisStage4);
+            newStage = t.analysisStage4;
+            setAnalysisStage(newStage);
+
+            // Announce stage change to screen readers
+            const announcer = document.getElementById("announcer");
+            if (announcer) {
+              announcer.textContent = newStage;
+            }
           }
           return Math.min(newProgress, 95);
         });
@@ -261,6 +321,7 @@ export default function ScamDetectionForm({
       <form
         onSubmit={handleSubmit}
         className="space-y-6 bg-gray-800 p-6 rounded-lg shadow-md backdrop-blur-sm border border-gray-700 relative overflow-hidden"
+        ref={formRef}
       >
         <div className="absolute -top-6 -right-6 w-12 h-12 rounded-full bg-blue-500/20 blur-xl animate-float"></div>
         <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-pink-500/20 blur-xl animate-pulse-slow"></div>

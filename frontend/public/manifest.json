@@ -1,0 +1,22 @@
+{
+  "name": "Rent-Spiracy",
+  "short_name": "Rent-Spiracy",
+  "description": "AI-powered rental scam detection and lease understanding tool",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+} 
