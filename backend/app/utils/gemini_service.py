@@ -667,76 +667,37 @@ class GeminiService:
         else:
             prompt_parts.append("\n\nNote: No lease document was provided.")
         
-        # Add California law references to consider
-        ca_laws = f"""
-\n\nKey California landlord-tenant laws to consider in your analysis (incorporate specific references and sections in your analysis):
+        # Add tenant law references to consider
+        tenant_laws = f"""
+\n\nImportant instructions for legal analysis:
 
-1. Security Deposits (Civil Code §§ 1950.5, 1940.5(g)):
-   - Limits on security deposit amounts (2x monthly rent for unfurnished, 3x for furnished)
-   - Requirements for returning deposits (21 days after move-out)
-   - Itemized statement of deductions required
-   - Interest payments on security deposits where required by local ordinance
+1. First, identify any locations (city, county, state) mentioned in the lease document or provided property address.
 
-2. Habitability (Civil Code § 1941.1):
-   - Warranty of habitability requirements
-   - Landlord's duty to repair and maintain premises 
-   - Tenant's remedies for uninhabitable conditions
+2. Provide legal analysis based on the specific location mentioned in the lease. If no location is mentioned or if the location isn't clear, default to using California law as a reference.
 
-3. Entry and Privacy (Civil Code § 1954):
-   - 24-hour written notice required except for emergencies
-   - Entry limited to business hours except by agreement
-   - Specific permissible reasons for entry
+3. For each problematic clause you identify, cite the specific:
+   - State laws that apply (with specific code sections)
+   - Local ordinances that might be relevant 
+   - Case law that affects interpretation
 
-4. Rent Control (where applicable):
-   - Costa-Hawkins Rental Housing Act (Civil Code §§ 1954.50-1954.535)
-   - Tenant Protection Act of 2019 (AB 1482) - Statewide rent caps and just-cause eviction
-   - Local ordinances in cities like San Francisco, Los Angeles, Oakland, Berkeley, etc.
+4. When analyzing the lease, consider these key areas of tenant law (as they apply to the specific location):
+   - Security deposit limitations and return requirements
+   - Habitability and repair responsibilities
+   - Privacy rights and landlord entry
+   - Rent control and eviction protections
+   - Discrimination protections
+   - Lease termination requirements
+   - Fee and late payment regulations
+   - Tenant repair rights
+   - Retaliation protections
+   - Required disclosures
+   - Utility responsibilities
 
-5. Discrimination (Fair Employment and Housing Act, Government Code § 12955):
-   - Protected classes under California law
-   - Requirements for accommodations and modifications
+5. Whenever possible, cite the specific legal code sections that apply to the location mentioned in the lease document, and include direct quotes from relevant statutes.
 
-6. Eviction Procedures (Code of Civil Procedure §§ 1161, 1179.01-1179.07):
-   - Notice requirements
-   - Just cause requirements
-   - COVID-19 protections where applicable
-
-7. Rent Payment (Civil Code § 1947):
-   - Grace periods
-   - Late fees (must be reasonable liquidated damages)
-   - Electronic payment requirements
-
-8. Right to Repair and Deduct (Civil Code § 1942):
-   - Tenant's right to repair and deduct from rent
-   - Limitations and requirements
-
-9. Retaliation Protections (Civil Code § 1942.5):
-   - Protection from landlord retaliation for exercising legal rights
-   - Remedies for retaliatory actions
-
-10. Bed Bug Notifications (Civil Code § 1954.603):
-    - Required disclosures
-    - Inspection and treatment requirements
-
-11. Utilities (Civil Code §§ 1940.9, 1941.1):
-    - Requirements for separate metering
-    - Landlord's obligations regarding essential utilities
-
-12. Early Termination (Civil Code § 1946.7):
-    - Domestic violence protections
-    - Military service protections
-
-13. Fee Limitations:
-    - Limitations on application fees (Civil Code § 1950.6)
-    - Screening fee limitations and requirements
-
-14. Tenant's Right to Organize (Civil Code § 1942.6):
-    - Right to organize tenant associations
-    - Protection from retaliation
-
-IMPORTANT: Always cite the specific code section numbers and include the exact statutory language when analyzing lease provisions.
+IMPORTANT: If the lease mentions a specific location (city/state), provide legal analysis tailored to that jurisdiction. If multiple locations are mentioned, focus on the property location. If no location is specified, use California law as a reference framework.
 """
-        prompt_parts.append(ca_laws)
+        prompt_parts.append(tenant_laws)
         
         # Request structured JSON output
         json_format_instructions = f"""
@@ -751,28 +712,28 @@ IMPORTANT: Always cite the specific code section numbers and include the exact s
 \n      "simplified_text": "Simplified explanation in {language.upper()}...",
 \n      "is_concerning": true,
 \n      "reason": "Detailed explanation of why this clause is concerning, potentially illegal, or unfair... MUST BE IN {language.upper()}",
-\n      "california_law": "Specific California Civil Code references with section numbers and direct quotes from the statutes... MUST BE IN {language.upper()}"
+\n      "california_law": "Specific legal references with jurisdiction, section numbers and direct quotes from the relevant statutes... MUST BE IN {language.upper()}"
 \n    }},
 \n    {{
 \n      "original_text": "Another concerning clause...",
 \n      "simplified_text": "Plain language explanation in {language.upper()}...",
 \n      "is_concerning": true,
 \n      "reason": "Explanation of the issue with this clause... MUST BE IN {language.upper()}",
-\n      "california_law": "Specific California Civil Code references with section numbers and direct quotes from the statutes... MUST BE IN {language.upper()}"
+\n      "california_law": "Specific legal references with jurisdiction, section numbers and direct quotes from the relevant statutes... MUST BE IN {language.upper()}"
 \n    }},
 \n    {{
 \n      "original_text": "Standard lease clause about rent payment...",
 \n      "simplified_text": "Plain language explanation in {language.upper()}...",
 \n      "is_concerning": false,
 \n      "reason": "Explanation of why this is a standard/normal lease term... MUST BE IN {language.upper()}",
-\n      "california_law": "Optional: Any relevant California Civil Code references that support this as standard... MUST BE IN {language.upper()}"
+\n      "california_law": "Optional: Any relevant legal references that support this as standard... MUST BE IN {language.upper()}"
 \n    }},
 \n    {{
 \n      "original_text": "Another standard clause about quiet enjoyment...",
 \n      "simplified_text": "Plain language explanation in {language.upper()}...",
 \n      "is_concerning": false,
 \n      "reason": "Explanation of why this is a standard/normal lease term... MUST BE IN {language.upper()}",
-\n      "california_law": "Optional: Any relevant California Civil Code references... MUST BE IN {language.upper()}"
+\n      "california_law": "Optional: Any relevant legal references... MUST BE IN {language.upper()}"
 \n    }}
 \n  ],
 \n  "suggested_questions": [
@@ -792,17 +753,16 @@ IMPORTANT: Always cite the specific code section numbers and include the exact s
 \n  ],
 \n  "california_tenant_rights": {{
 \n    "relevant_statutes": [
-\n      "California Civil Code § 1950.5 - Security Deposits: [quote exact statute text]",
-\n      "California Civil Code § 1941.1 - Implied Warranty of Habitability: [quote exact statute text]",
-\n      "Additional relevant statute with section number and text..."
+\n      "State-specific Civil Code or statute reference - with location and exact law text",
+\n      "Additional relevant statute with specific section numbers and text..."
 \n    ],
 \n    "local_ordinances": [
-\n      "Any relevant local ordinances that might apply based on property location",
-\n      "Rent control or just-cause eviction ordinances if applicable" 
+\n      "Any relevant local ordinances that apply based on the property location",
+\n      "Rent control or tenant protection ordinances if applicable to the location" 
 \n    ],
 \n    "case_law": [
-\n      "Relevant California cases that interpret these statutes",
-\n      "Precedent that affects how these laws are applied"
+\n      "Relevant cases that interpret these statutes in the jurisdiction",
+\n      "Precedent that affects how these laws are applied in the specific location"
 \n    ]
 \n  }}
 \n}}

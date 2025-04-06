@@ -357,7 +357,7 @@ export default function ScamDetectionResults({
       landlordCommunicationFactor: "राउंट कॉम्युनिकेशन पैटर्न का आकलन",
       propertyVerificationFactor: "संपत्ति की जानकारी सत्यापन",
       scoreRangeExplanation:
-        "अंक 80-100 को विश्वसनीय माना जाता है, 50-79 प्रयोजन प्रयोजन एवं 50 नीचे गुरुत्वपूर्ण चिह्न देखाते हैं।",
+        "अंक 80-100 बिश्वसनीय माना जाता है, 50-79 प्रयोजन प्रयोजन एवं 50 नीचे गुरुत्वपूर्ण चिह्न देखाते हैं।",
     },
     korean: {
       title: "사기 탐지 결과",
@@ -801,6 +801,144 @@ export default function ScamDetectionResults({
     return formatExplanation(results.explanation);
   }, [results.explanation, rawData]);
 
+  // Get location-based title
+  const getLocationBasedTitle = () => {
+    // First, try to detect location from the statutes if available
+    if (
+      results.california_tenant_rights?.relevant_statutes &&
+      results.california_tenant_rights.relevant_statutes.length > 0
+    ) {
+      // Get the first statute and check for common state patterns
+      const firstStatute =
+        results.california_tenant_rights.relevant_statutes[0] || "";
+
+      // Check for specific states
+      const statePatterns = [
+        {
+          pattern: /california|cal\.\s+civ\.\s+code|cal\s+civil/i,
+          name: "California",
+        },
+        { pattern: /new york|ny\s+real\s+prop|ny\s+rpl/i, name: "New York" },
+        {
+          pattern: /florida|fla\.\s+stat|florida\s+statutes/i,
+          name: "Florida",
+        },
+        {
+          pattern: /texas|tex\.\s+prop\.\s+code|texas\s+property/i,
+          name: "Texas",
+        },
+        { pattern: /illinois|ilcs|illinois\s+compiled/i, name: "Illinois" },
+        { pattern: /georgia|ga\.\s+code|georgia\s+code/i, name: "Georgia" },
+        {
+          pattern: /washington|wash\.\s+rev\.\s+code|rcw/i,
+          name: "Washington",
+        },
+        {
+          pattern: /massachusetts|mass\.\s+gen\.\s+laws/i,
+          name: "Massachusetts",
+        },
+        { pattern: /michigan|mich\.\s+comp\.\s+laws/i, name: "Michigan" },
+        { pattern: /ohio|ohio\s+rev\.\s+code/i, name: "Ohio" },
+      ];
+
+      for (const state of statePatterns) {
+        if (state.pattern.test(firstStatute)) {
+          // Map to translate state tenant rights titles
+          const rightsTitlesByLanguage: { [key: string]: string } = {
+            english: `${state.name} Tenant Rights`,
+            spanish: `Derechos del Inquilino en ${state.name}`,
+            chinese: `${state.name} 租户权利`,
+            hindi: `${state.name} किरायेदार अधिकार`,
+            korean: `${state.name} 세입자 권리`,
+            bengali: `${state.name} ভাড়াটিয়া আইন`,
+            swahili: `Haki za Mpangaji katika ${state.name}`,
+            arabic: `حقوق المستأجر في ${state.name}`,
+          };
+
+          return (
+            rightsTitlesByLanguage[
+              language as keyof typeof rightsTitlesByLanguage
+            ] || rightsTitlesByLanguage.english
+          );
+        }
+      }
+    }
+
+    // Default titles by language
+    const defaultTitles: { [key: string]: string } = {
+      english: "Tenant Rights",
+      spanish: "Derechos del Inquilino",
+      chinese: "租户权利",
+      hindi: "किरायेदार अधिकार",
+      korean: "세입자 권리",
+      bengali: "ভাড়াটিয়া আইনি অধিকার",
+      swahili: "Haki za Mpangaji",
+      arabic: "حقوق المستأجر",
+    };
+
+    return (
+      defaultTitles[language as keyof typeof defaultTitles] ||
+      defaultTitles.english
+    );
+  };
+
+  // Function to get a readable name for the legal reference field
+  const getLegalReferenceName = () => {
+    const legalReferenceLabels: { [key: string]: string } = {
+      english: "Legal Reference:",
+      spanish: "Referencia Legal:",
+      chinese: "法律参考:",
+      hindi: "कानूनी संदर्भ:",
+      korean: "법적 참조:",
+      bengali: "আইনি উল্লেখ:",
+      swahili: "Marejeleo ya Kisheria:",
+      arabic: "المراجع القانونية:",
+    };
+
+    return (
+      legalReferenceLabels[language as keyof typeof legalReferenceLabels] ||
+      legalReferenceLabels.english
+    );
+  };
+
+  // Get title for standard terms section in current language
+  const getStandardTermsTitle = () => {
+    const standardTermsTitles: { [key: string]: string } = {
+      english: "Standard/Expected Terms",
+      spanish: "Términos Estándar/Esperados",
+      chinese: "标准/预期条款",
+      hindi: "मानक/अपेक्षित शर्तें",
+      korean: "표준/예상 조건",
+      bengali: "লিজ ধারা পরিদর্শন",
+      swahili: "Masharti ya Kawaida/Yanayotarajiwa",
+      arabic: "البنود القياسية/المتوقعة",
+    };
+
+    return (
+      standardTermsTitles[language as keyof typeof standardTermsTitles] ||
+      standardTermsTitles.english
+    );
+  };
+
+  // Get title for clauses to review section in current language
+  const getClausesToReviewTitle = () => {
+    const clausesToReviewTitles: { [key: string]: string } = {
+      english: "Clauses to Review",
+      spanish: "Cláusulas para Revisar",
+      chinese: "需要审查的条款",
+      hindi: "समीक्षा के लिए खंड",
+      korean: "검토할 조항",
+      bengali: "পর্যালোচনা করার ধারাগুলি",
+      swahili: "Vipengele vya Kukagua",
+      arabic: "بنود للمراجعة",
+    };
+
+    return (
+      clausesToReviewTitles[language as keyof typeof clausesToReviewTitles] ||
+      clausesToReviewTitles.english
+    );
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
       <div className="text-center mb-8">
@@ -998,7 +1136,12 @@ export default function ScamDetectionResults({
                 .length > 0 && (
                 <div className="mb-4">
                   <h3 className="text-md font-semibold mb-2 text-green-400">
-                    Standard/Expected Terms
+                    {getStandardTermsTitle()}
+                    {language === "bengali" && (
+                      <div className="text-xs font-normal text-gray-400 mt-1">
+                        Standard/Expected Terms
+                      </div>
+                    )}
                   </h3>
                   <div className="space-y-2">
                     {results.simplified_clauses
@@ -1030,7 +1173,12 @@ export default function ScamDetectionResults({
                 .length > 0 && (
                 <div>
                   <h3 className="text-md font-semibold mb-2 text-yellow-400">
-                    Clauses to Review
+                    {getClausesToReviewTitle()}
+                    {language === "bengali" && (
+                      <div className="text-xs font-normal text-gray-400 mt-1">
+                        Clauses to Review
+                      </div>
+                    )}
                   </h3>
                   <div className="space-y-2">
                     {results.simplified_clauses
@@ -1068,7 +1216,11 @@ export default function ScamDetectionResults({
                                 {clause.california_law && (
                                   <p className="text-emerald-400 text-sm mt-2 border-t border-gray-700 pt-2">
                                     <span className="font-semibold">
-                                      California Law:
+                                      {clause.california_law.includes(
+                                        "California"
+                                      )
+                                        ? "California Law:"
+                                        : getLegalReferenceName()}
                                     </span>{" "}
                                     {unescapeText(clause.california_law)}
                                   </p>
@@ -1195,7 +1347,7 @@ export default function ScamDetectionResults({
           </div>
         )}
 
-        {/* Add California Tenant Rights section */}
+        {/* Add Tenant Rights section (dynamic location) */}
         {results.california_tenant_rights &&
           (results.california_tenant_rights.relevant_statutes?.length > 0 ||
             results.california_tenant_rights.local_ordinances?.length > 0 ||
@@ -1204,7 +1356,7 @@ export default function ScamDetectionResults({
               <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-emerald-500/20 blur-xl animate-pulse-slow"></div>
 
               <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
-                California Tenant Rights
+                {getLocationBasedTitle()}
                 <span className="animate-float inline-block">📜</span>
               </h2>
 
@@ -1212,7 +1364,7 @@ export default function ScamDetectionResults({
                 0 && (
                 <div className="mb-4">
                   <h3 className="text-md font-semibold text-emerald-400 mb-2">
-                    Relevant California Statutes
+                    Relevant Statutes
                   </h3>
                   <ul className="space-y-2 pl-2">
                     {results.california_tenant_rights.relevant_statutes.map(

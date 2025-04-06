@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { scamDetectionApi, ScamDetectionResponse } from "../services/api";
 import { translations } from "../services/constants";
 
@@ -35,10 +35,7 @@ export default function ScamDetectionForm({
   language,
   onSubmit,
 }: ScamDetectionFormProps) {
-  const [listingUrl, setListingUrl] = useState("");
-  const [address, setAddress] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -50,34 +47,10 @@ export default function ScamDetectionForm({
     (translations[language as keyof typeof translations] as TranslationType) ||
     (translations.english as TranslationType);
 
-  useEffect(() => {
-    return () => {
-      previewUrls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [previewUrls]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
-
-      const newPreviewUrls: string[] = [];
-
-      newFiles.forEach((file) => {
-        // Account for HEIC files as images despite their content type
-        const isImage =
-          file.type.startsWith("image/") ||
-          file.name.toLowerCase().endsWith(".heic") ||
-          file.name.toLowerCase().endsWith(".heif");
-
-        if (isImage) {
-          const url = URL.createObjectURL(file);
-          newPreviewUrls.push(url);
-        }
-      });
-
       setSelectedFiles((prev) => [...prev, ...newFiles]);
-      setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
-
       setUploadProgress(0);
       setAnalysisStage(null);
     }
@@ -89,15 +62,6 @@ export default function ScamDetectionForm({
       newFiles.splice(index, 1);
       return newFiles;
     });
-
-    if (previewUrls[index]) {
-      URL.revokeObjectURL(previewUrls[index]);
-      setPreviewUrls((prev) => {
-        const newUrls = [...prev];
-        newUrls.splice(index, 1);
-        return newUrls;
-      });
-    }
   };
 
   const handleCapturePhoto = () => {
@@ -110,7 +74,7 @@ export default function ScamDetectionForm({
     e.preventDefault();
     setError(null);
 
-    if (!listingUrl && !address && selectedFiles.length === 0) {
+    if (selectedFiles.length === 0) {
       setError(t.atLeastOneField);
       return;
     }
@@ -125,7 +89,9 @@ export default function ScamDetectionForm({
       | "chinese"
       | "hindi"
       | "korean"
-      | "bengali";
+      | "bengali"
+      | "swahili"
+      | "arabic";
 
     try {
       let response;
@@ -150,16 +116,16 @@ export default function ScamDetectionForm({
         if (selectedFiles.length === 1) {
           response = await scamDetectionApi.uploadDocument(
             selectedFiles[0],
-            listingUrl || undefined,
-            address || undefined,
+            undefined,
+            undefined,
             apiLanguage,
             false
           );
         } else {
           response = await scamDetectionApi.uploadMultipleDocuments(
             selectedFiles,
-            listingUrl || undefined,
-            address || undefined,
+            undefined,
+            undefined,
             apiLanguage,
             false
           );
@@ -207,56 +173,6 @@ export default function ScamDetectionForm({
         <div className="absolute -top-6 -right-6 w-12 h-12 rounded-full bg-blue-500/20 blur-xl animate-float"></div>
         <div className="absolute -bottom-6 -left-6 w-12 h-12 rounded-full bg-pink-500/20 blur-xl animate-pulse-slow"></div>
 
-        <div className="group">
-          <label
-            className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
-            htmlFor="listingUrl"
-          >
-            {t.urlLabel}
-          </label>
-          <div className="relative">
-            <input
-              id="listingUrl"
-              type="url"
-              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-              value={listingUrl}
-              onChange={(e) => setListingUrl(e.target.value)}
-              placeholder="https://"
-              disabled={isSubmitting}
-            />
-            {listingUrl && (
-              <span className="absolute right-3 top-2 text-lg animate-bounceIn">
-                🔗
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="group">
-          <label
-            className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
-            htmlFor="address"
-          >
-            {t.addressLabel}
-          </label>
-          <div className="relative">
-            <input
-              id="address"
-              type="text"
-              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="123 Main Street, Apt 4B"
-              disabled={isSubmitting}
-            />
-            {address && (
-              <span className="absolute right-3 top-2 text-lg animate-bounceIn">
-                📍
-              </span>
-            )}
-          </div>
-        </div>
-
         <div className="space-y-4">
           <div className="group">
             <label
@@ -299,31 +215,35 @@ export default function ScamDetectionForm({
           </div>
 
           {selectedFiles.length > 0 && (
-            <div className="mt-3 bg-gray-700/50 rounded p-2 max-h-48 overflow-y-auto">
-              <h4 className="text-xs font-medium text-gray-300 mb-2">
-                Selected Files:
+            <div className="mt-3 bg-gray-700/50 rounded p-3 max-h-56 overflow-y-auto border border-gray-600">
+              <h4 className="text-sm font-medium text-blue-300 mb-2 flex items-center">
+                <span className="mr-2">📂</span>
+                Selected Files ({selectedFiles.length})
               </h4>
               <ul className="space-y-2">
                 {selectedFiles.map((file, index) => (
                   <li
                     key={index}
-                    className="flex items-center justify-between text-sm text-gray-300 p-1 hover:bg-gray-600/30 rounded"
+                    className="flex items-center justify-between text-sm text-gray-300 p-2 bg-gray-750/50 rounded border border-gray-600"
                   >
                     <div className="flex items-center">
-                      <span className="mr-2">
+                      <span className="mr-2 text-lg">
                         {file.type.startsWith("image/") ? "🖼️" : "📄"}
                       </span>
-                      <span className="truncate max-w-[200px]">
-                        {file.name}
-                      </span>
-                      <span className="ml-2 text-gray-400 text-xs">
-                        ({(file.size / 1024).toFixed(1)} KB)
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="truncate max-w-[200px] font-medium">
+                          {file.name}
+                        </span>
+                        <span className="text-gray-400 text-xs">
+                          {file.type || "Unknown type"} •{" "}
+                          {(file.size / 1024).toFixed(1)} KB
+                        </span>
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeFile(index)}
-                      className="text-red-400 hover:text-red-300 transition-colors ml-2"
+                      className="bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition-colors ml-2 p-1 rounded"
                       disabled={isSubmitting}
                     >
                       ✕
@@ -351,7 +271,7 @@ export default function ScamDetectionForm({
               disabled={isSubmitting}
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <button
                 type="button"
                 onClick={handleCapturePhoto}
@@ -362,28 +282,6 @@ export default function ScamDetectionForm({
                 {t.takePhotoLabel}
               </button>
             </div>
-
-            {previewUrls.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {previewUrls.map((url, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={url}
-                      className="h-20 w-20 object-cover rounded shadow-md border border-gray-700"
-                      alt={`Preview ${index + 1}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md opacity-80 hover:opacity-100 transition-opacity"
-                      disabled={isSubmitting}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -412,7 +310,7 @@ export default function ScamDetectionForm({
           <button
             type="submit"
             className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center justify-center"
-            disabled={isSubmitting}
+            disabled={isSubmitting || selectedFiles.length === 0}
           >
             {isSubmitting ? (
               <>
@@ -439,6 +337,7 @@ export default function ScamDetectionForm({
               </>
             ) : (
               <>
+                <span className="mr-2">✓</span>
                 <span>{t.submitButton}</span>
               </>
             )}
