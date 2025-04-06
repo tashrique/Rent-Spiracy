@@ -50,3 +50,8 @@ async def get_analyses_collection():
     """Get analyses collection."""
     db = Database.get_db()
     return db.analyses
+
+def get_lawyers_collection():
+    """Get lawyers collection."""
+    db = Database.get_db()
+    return db.lawyers

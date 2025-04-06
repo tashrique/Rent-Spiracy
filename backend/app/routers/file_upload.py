@@ -72,7 +72,20 @@ async def upload_document(
         
         if file_extension == '.pdf':
             # Parse PDF document
-            document_content = extract_text_from_pdf(content)
+            try:
+                document_content = extract_text_from_pdf(content)
+            except ValueError as pdf_error:
+                # Use the specific error message from the PDF parser
+                raise HTTPException(
+                    status_code=400,
+                    detail=str(pdf_error)
+                )
+            except Exception as e:
+                logger.error(f"Unexpected error parsing PDF: {str(e)}")
+                raise HTTPException(
+                    status_code=400,
+                    detail="Could not extract text from the PDF. The file might be corrupted, password-protected, or in an unsupported format."
+                )
         elif content_type.startswith('image/') or file_extension in ['.heic', '.heif']:
             # Process image using OCR
             try:
@@ -180,11 +193,23 @@ async def upload_document(
             status_code=400,
             detail="Could not decode the document. Please ensure it's a valid text file."
         )
+    except HTTPException:
+        # Re-raise HTTP exceptions without modification
+        raise
     except Exception as e:
         logger.error(f"An error occurred processing the file: {str(e)}")
+        # Provide a more user-friendly error message
+        error_message = str(e)
+        if "password" in error_message.lower() or "encrypt" in error_message.lower():
+            detail = "The document appears to be password-protected. Please upload an unprotected document."
+        elif "corrupt" in error_message.lower():
+            detail = "The document appears to be corrupted. Please try a different file."
+        else:
+            detail = f"An error occurred processing the file: {str(e)}"
+            
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred processing the file: {str(e)}"
+            detail=detail
         )
 
 
@@ -248,7 +273,20 @@ async def upload_multiple_documents(
             
             if file_extension == '.pdf':
                 # Parse PDF document
-                document_content = extract_text_from_pdf(content)
+                try:
+                    document_content = extract_text_from_pdf(content)
+                except ValueError as pdf_error:
+                    # Use the specific error message from the PDF parser
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Error in file {file.filename}: {str(pdf_error)}"
+                    )
+                except Exception as e:
+                    logger.error(f"Unexpected error parsing PDF {file.filename}: {str(e)}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Could not extract text from the PDF {file.filename}. The file might be corrupted, password-protected, or in an unsupported format."
+                    )
             elif content_type.startswith('image/') or file_extension in ['.heic', '.heif']:
                 # Process image using OCR
                 try:
@@ -357,9 +395,21 @@ async def upload_multiple_documents(
             status_code=400,
             detail="Could not decode one or more documents. Please ensure they are valid files."
         )
+    except HTTPException:
+        # Re-raise HTTP exceptions without modification
+        raise
     except Exception as e:
         logger.error(f"An error occurred processing the files: {str(e)}")
+        # Provide a more user-friendly error message
+        error_message = str(e)
+        if "password" in error_message.lower() or "encrypt" in error_message.lower():
+            detail = "One or more documents appear to be password-protected. Please upload unprotected documents."
+        elif "corrupt" in error_message.lower():
+            detail = "One or more documents appear to be corrupted. Please try different files."
+        else:
+            detail = f"An error occurred processing the files: {str(e)}"
+            
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred processing the files: {str(e)}"
+            detail=detail
         )

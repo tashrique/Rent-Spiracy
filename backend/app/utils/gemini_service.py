@@ -169,7 +169,8 @@ class GeminiService:
                     "trustworthiness_score": trustworthiness_score,
                     "trustworthiness_grade": trustworthiness_grade.value,
                     "risk_level": risk_level.value,
-                    "california_tenant_rights": parsed_data.get('california_tenant_rights', {})
+                    "california_tenant_rights": parsed_data.get('california_tenant_rights', {}),
+                    "key_lease_terms": parsed_data.get('key_lease_terms', {})
                 }
                 
             # If JSON extraction failed, try to parse using regex/NLP techniques
@@ -202,7 +203,8 @@ class GeminiService:
                 "trustworthiness_score": trustworthiness_score, 
                 "trustworthiness_grade": trustworthiness_grade.value,
                 "risk_level": risk_level.value,
-                "california_tenant_rights": {}
+                "california_tenant_rights": {},
+                "key_lease_terms": {}
             }
         
         except Exception as e:
@@ -218,7 +220,8 @@ class GeminiService:
                 "trustworthiness_score": 50,
                 "trustworthiness_grade": TrustworthinessGrade.C.value,
                 "risk_level": RiskLevel.MEDIUM_RISK.value,
-                "california_tenant_rights": {}
+                "california_tenant_rights": {},
+                "key_lease_terms": {}
             }
     
     @staticmethod
@@ -342,7 +345,8 @@ class GeminiService:
                         "concerning_clauses": clauses,
                         "suggested_questions": questions,
                         "action_items": actions,
-                        "california_tenant_rights": {}
+                        "california_tenant_rights": {},
+                        "key_lease_terms": {}
                     }
                 except Exception as regex_error:
                     logger.warning(f"Error in regex-based extraction: {regex_error}")
@@ -619,32 +623,43 @@ class GeminiService:
         print(f"Generating prompt with language: {language}")
         
         prompt_parts = [
-            f"You are an experienced legal expert specializing in rental agreements and lease documents with deep knowledge of California landlord-tenant law. Your task is to analyze the provided lease document in EXTREME DETAIL to identify potential scams, concerning clauses, tenant rights issues, and any other problematic elements. Your entire analysis MUST be written in {language.upper()}. Do NOT provide any analysis in English unless {language.upper()} is English.",
+            f"You are an experienced legal expert specializing in rental agreements and lease documents with deep knowledge of landlord-tenant law across all US states and territories. Your task is to analyze the provided lease document in EXTREME DETAIL to identify potential scams, concerning clauses, tenant rights issues, and any other problematic elements. Your entire analysis MUST be written in {language.upper()}. Do NOT provide any analysis in English unless {language.upper()} is English.",
             
             f"First, determine if this is actually a lease agreement. Be VERY CAREFUL with this determination - only classify as 'not a lease' if the document is clearly something else like a tax form, bank statement, or random text. A basic or template lease should still be identified as a lease agreement, even if it's incomplete. If it has sections about rent, security deposit, tenant obligations, etc., it is likely a lease. If it's not a lease agreement, explicitly state this is NOT a lease agreement, explain what it appears to be, and why this indicates a potential scam. This explanation MUST be in {language.upper()}.",
             
             f"\n\nYour detailed analysis should include (ALL IN {language.upper()}):"
             f"\n1. A determination of scam likelihood (Low, Medium, or High) with thorough explanation"
-            f"\n2. A comprehensive assessment of the lease as a whole - provide DETAILED analysis of at least 300 words"
-            f"\n3. A detailed breakdown of EACH concerning clause with:"
+            f"\n2. A comprehensive assessment of the lease as a whole - provide DETAILED analysis of at least 600 words"
+            f"\n3. A comprehensive summary of key lease terms including:"
+            f"\n   - Rent amount and due date"
+            f"\n   - Security deposit amount and return conditions"
+            f"\n   - Lease duration (start and end dates)"
+            f"\n   - Renewal and termination conditions"
+            f"\n   - Maintenance responsibilities (landlord vs tenant)"
+            f"\n   - Utilities and who is responsible for payment"
+            f"\n   - Pet policies and related fees"
+            f"\n   - Late payment policies and fees"
+            f"\n   - Entry notice requirements"
+            f"\n   - Any other important terms that affect the tenant's obligations"
+            f"\n4. A detailed breakdown of EACH concerning clause with:"
             f"\n   - The exact text from the lease"
             f"\n   - A simplified explanation in plain language"
             f"\n   - Why this clause is concerning or problematic"
-            f"\n   - Whether it might be illegal or unenforceable under California law"
-            f"\n   - SPECIFIC California legal code references (e.g., Civil Code Section 1950.5 for security deposits, etc.)"
-            f"\n   - Direct quotes from relevant California statutes when applicable"
+            f"\n   - Whether it might be illegal or unenforceable under the laws of the state mentioned in the lease"
+            f"\n   - SPECIFIC legal code references for the state/jurisdiction mentioned in the lease (e.g., specific statutes or code sections)"
+            f"\n   - Direct quotes from relevant statutes when applicable"
             f"\n   - Specific recommendations for the tenant regarding this clause"
-            f"\n4. Identification of standard/expected lease terms that are normal and fair to tenants:"
+            f"\n5. Identification of standard/expected lease terms that are normal and fair to tenants:"
             f"\n   - Normal clauses that are typical in residential leases"
             f"\n   - Clauses that may initially seem concerning but are actually standard legal practice"
             f"\n   - An explanation of why these terms are considered normal, fair, or legally required"
-            f"\n5. At least 6-8 specific questions the tenant should ask before signing, with explanations of why each question is important"
-            f"\n6. Actionable recommendations - specific actions the tenant should take based on your analysis"
-            f"\n7. A special section on California tenant rights that includes:"
-            f"\n   - Relevant California Civil Code sections that apply to this lease"
-            f"\n   - Local ordinances that might affect tenant rights (e.g., rent control in SF, LA, etc.)"
+            f"\n6. At least 8-10 specific questions the tenant should ask before signing, with explanations of why each question is important"
+            f"\n7. Actionable recommendations - specific actions the tenant should take based on your analysis"
+            f"\n8. A special section on tenant rights that includes:"
+            f"\n   - Relevant state and local laws that apply to this lease"
+            f"\n   - Local ordinances that might affect tenant rights (e.g., rent control)"
             f"\n   - Citations to specific case law where relevant"
-            f"\n   - The exact text of the most important California statutes related to identified issues"
+            f"\n   - The exact text of the most important statutes related to identified issues"
 
 
             f"\nIMPORTANT: EVERY SINGLE WORD of your analysis MUST be written in {language.upper()}. DO NOT use English at all unless {language.upper()} is English."
@@ -671,16 +686,16 @@ class GeminiService:
         tenant_laws = f"""
 \n\nImportant instructions for legal analysis:
 
-1. First, identify any locations (city, county, state) mentioned in the lease document or provided property address.
+1. FIRST AND MOST IMPORTANT: Identify the specific state/jurisdiction mentioned in the lease document or provided property address. DO NOT default to California law.
 
-2. Provide legal analysis based on the specific location mentioned in the lease. If no location is mentioned or if the location isn't clear, default to using California law as a reference.
+2. Provide legal analysis based on the SPECIFIC location mentioned in the lease. If no location is mentioned or if the location isn't clear, try to infer it from other information in the document. Only use California law as a last resort reference if no location information is available.
 
 3. For each problematic clause you identify, cite the specific:
-   - State laws that apply (with specific code sections)
-   - Local ordinances that might be relevant 
-   - Case law that affects interpretation
+   - State laws that apply (with specific code sections from that state)
+   - Local ordinances that might be relevant to that location
+   - Case law from that jurisdiction that affects interpretation
 
-4. When analyzing the lease, consider these key areas of tenant law (as they apply to the specific location):
+4. When analyzing the lease, consider these key areas of tenant law (as they apply to the SPECIFIC location):
    - Security deposit limitations and return requirements
    - Habitability and repair responsibilities
    - Privacy rights and landlord entry
@@ -695,7 +710,7 @@ class GeminiService:
 
 5. Whenever possible, cite the specific legal code sections that apply to the location mentioned in the lease document, and include direct quotes from relevant statutes.
 
-IMPORTANT: If the lease mentions a specific location (city/state), provide legal analysis tailored to that jurisdiction. If multiple locations are mentioned, focus on the property location. If no location is specified, use California law as a reference framework.
+ABSOLUTELY CRITICAL: Your analysis MUST be based on the laws of the specific state/jurisdiction mentioned in the lease, NOT defaulting to California law. Your analysis should be comprehensive, detailed (at least 500 words), and specific to the jurisdiction of the property.
 """
         prompt_parts.append(tenant_laws)
         
@@ -705,35 +720,57 @@ IMPORTANT: If the lease mentions a specific location (city/state), provide legal
 \n```json
 \n{{
 \n  "scam_likelihood": "Low|Medium|High",
-\n  "explanation": "Your detailed 300+ word explanation here with thorough assessment of the entire lease... MUST BE IN {language.upper()}",
+\n  "explanation": "Your detailed 500+ word explanation here with thorough assessment of the entire lease... MUST BE IN {language.upper()}",
+\n  "key_lease_terms": {{
+\n    "rent": {{
+\n      "amount": "Monthly rent amount",
+\n      "due_date": "When rent is due",
+\n      "payment_method": "Accepted payment methods"
+\n    }},
+\n    "security_deposit": {{
+\n      "amount": "Security deposit amount",
+\n      "return_conditions": "When and how it will be returned"
+\n    }},
+\n    "lease_duration": {{
+\n      "start_date": "Lease start date",
+\n      "end_date": "Lease end date"
+\n    }},
+\n    "renewal_termination": "Summary of renewal and termination conditions",
+\n    "maintenance": "Summary of maintenance responsibilities",
+\n    "utilities": "Who pays for which utilities",
+\n    "pets": "Pet policy summary",
+\n    "late_payment": "Late payment fees and policies",
+\n    "entry_notice": "Landlord entry notice requirements",
+\n    "other_key_terms": "Any other important terms worth noting"
+\n  }},
 \n  "concerning_clauses": [
 \n    {{
 \n      "original_text": "Exact clause text from document...",
 \n      "simplified_text": "Simplified explanation in {language.upper()}...",
 \n      "is_concerning": true,
 \n      "reason": "Detailed explanation of why this clause is concerning, potentially illegal, or unfair... MUST BE IN {language.upper()}",
-\n      "california_law": "Specific legal references with jurisdiction, section numbers and direct quotes from the relevant statutes... MUST BE IN {language.upper()}"
+\n      "legal_reference": "Specific legal references with jurisdiction, section numbers and direct quotes from the relevant statutes for the specific state/jurisdiction mentioned in the lease... MUST BE IN {language.upper()}"
 \n    }},
 \n    {{
 \n      "original_text": "Another concerning clause...",
 \n      "simplified_text": "Plain language explanation in {language.upper()}...",
 \n      "is_concerning": true,
 \n      "reason": "Explanation of the issue with this clause... MUST BE IN {language.upper()}",
-\n      "california_law": "Specific legal references with jurisdiction, section numbers and direct quotes from the relevant statutes... MUST BE IN {language.upper()}"
+\n      "legal_reference": "Specific legal references with jurisdiction, section numbers and direct quotes from the relevant statutes for the specific state/jurisdiction mentioned in the lease... MUST BE IN {language.upper()}"
 \n    }},
 \n    {{
 \n      "original_text": "Standard lease clause about rent payment...",
 \n      "simplified_text": "Plain language explanation in {language.upper()}...",
 \n      "is_concerning": false,
 \n      "reason": "Explanation of why this is a standard/normal lease term... MUST BE IN {language.upper()}",
-\n      "california_law": "Optional: Any relevant legal references that support this as standard... MUST BE IN {language.upper()}"
+\n      "legal_reference": "Optional: Any relevant legal references that support this as standard... MUST BE IN {language.upper()}"
 \n    }},
 \n    {{
 \n      "original_text": "Another standard clause about quiet enjoyment...",
 \n      "simplified_text": "Plain language explanation in {language.upper()}...",
 \n      "is_concerning": false,
 \n      "reason": "Explanation of why this is a standard/normal lease term... MUST BE IN {language.upper()}",
-\n      "california_law": "Optional: Any relevant legal references... MUST BE IN {language.upper()}"
+\n      "legal_reference": "Optional: Any relevant legal references from the specific state/jurisdiction... MUST BE IN {language.upper()}"
 \n    }}
 \n  ],
 \n  "suggested_questions": [
@@ -744,25 +781,27 @@ IMPORTANT: If the lease mentions a specific location (city/state), provide legal
 \n    "A question about missing information? IN {language.upper()}",
 \n    "A question about unclear language or terms? IN {language.upper()}",
 \n    "A question about legal rights and protections? IN {language.upper()}",
-\n    "A question about responsibilities not mentioned in the lease? IN {language.upper()}"
+\n    "A question about responsibilities not mentioned in the lease? IN {language.upper()}",
+\n    "A question about state-specific tenant rights? IN {language.upper()}",
+\n    "A question about local ordinances that might apply? IN {language.upper()}"
 \n  ],
 \n  "action_items": [
 \n    "Specific action the tenant should take, like 'Request written clarification about clause X' IN {language.upper()}",
-\n    "Another action recommendation, like 'Verify the landlord is the actual property owner' IN {language.upper()}",
-\n    "A third action recommendation, like 'Consult with a tenant rights attorney about clause Y' IN {language.upper()}"
+\n    "Another recommended action IN {language.upper()}",
+\n    "A third recommended action IN {language.upper()}"
 \n  ],
-\n  "california_tenant_rights": {{
+\n  "tenant_rights": {{
 \n    "relevant_statutes": [
-\n      "State-specific Civil Code or statute reference - with location and exact law text",
-\n      "Additional relevant statute with specific section numbers and text..."
+\n      "Specific state statute citation and text IN {language.upper()}",
+\n      "Another relevant state law IN {language.upper()}"
 \n    ],
 \n    "local_ordinances": [
-\n      "Any relevant local ordinances that apply based on the property location",
-\n      "Rent control or tenant protection ordinances if applicable to the location" 
+\n      "Relevant local ordinance for the property's location IN {language.upper()}",
+\n      "Another local regulation IN {language.upper()}"
 \n    ],
 \n    "case_law": [
-\n      "Relevant cases that interpret these statutes in the jurisdiction",
-\n      "Precedent that affects how these laws are applied in the specific location"
+\n      "Relevant case law citation from the state jurisdiction IN {language.upper()}",
+\n      "Another relevant case IN {language.upper()}"
 \n    ]
 \n  }}
 \n}}
@@ -773,7 +812,7 @@ IMPORTANT: If the lease mentions a specific location (city/state), provide legal
         prompt_parts.append(f"""
 \nBe extremely thorough in your analysis. Identify ALL concerning clauses, not just the most obvious ones.
 \nIf you find potentially illegal or highly unfair terms, be sure to highlight them prominently.
-\nInclude at least 6-8 detailed, specific questions tailored to the exact issues in this lease document.
+\nInclude at least 8-10 detailed, specific questions tailored to the exact issues in this lease document.
 \nMAKE SURE to clearly distinguish between genuinely concerning clauses and standard/normal lease terms that are fair and legal.
 \nFor standard lease terms, mark them as not concerning (is_concerning: false) and provide a brief explanation of why they are normal.
 \nBe lenient in your assessment - only mark clauses as concerning if they are truly problematic or unfair to tenants.
@@ -785,6 +824,7 @@ IMPORTANT: If the lease mentions a specific location (city/state), provide legal
 \nEnsure your response is correctly formatted JSON and can be parsed directly.
 \nALL OF THE TEXT INSIDE THE JSON, EVERY SINGLE WORD, MUST BE IN {language.upper()}.
 \nFINAL REMINDER: YOUR ENTIRE RESPONSE SHOULD BE IN {language.upper()} only. Do not use English at all unless {language.upper()} is English.
+\nMOST IMPORTANT REMINDER: BASE YOUR ANALYSIS ON THE SPECIFIC STATE/JURISDICTION MENTIONED IN THE LEASE, NOT DEFAULTING TO CALIFORNIA LAW.
 """)
         
         # Combine all parts
