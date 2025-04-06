@@ -39,6 +39,7 @@ def get_allowed_origins() -> List[str]:
             # Production default to vercel deployment and localhost for testing
             return [
                 "https://rent-spiracy.vercel.app",
+                "https://rent-spiracy.onrender.com",
                 "https://rentspiracy.tech",
                 "https://www.rentspiracy.tech"
             ]
