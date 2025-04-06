@@ -5,16 +5,10 @@ import LanguageSelector from "../components/LanguageSelector";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ScamDetectionForm from "../components/ScamDetectionForm";
 import ScamDetectionResults from "../components/ScamDetectionResults";
-import { ScamDetectionResponse } from "../services/api";
+import { ScamDetectionResponse, Language } from "../services/api";
 import { api } from "../services/api";
 import { defaultMockResults, funQuotes } from "../services/constants";
-type Language =
-  | "english"
-  | "chinese"
-  | "hindi"
-  | "spanish"
-  | "korean"
-  | "bengali";
+
 type Step = "language" | "form" | "results";
 
 export default function Home() {

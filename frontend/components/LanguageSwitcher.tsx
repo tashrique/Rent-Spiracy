@@ -1,16 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-type Language =
-  | "english"
-  | "chinese"
-  | "hindi"
-  | "spanish"
-  | "korean"
-  | "bengali"
-  | "swahili"
-  | "arabic";
+import { Language } from "../services/api";
 
 interface LanguageOption {
   code: Language;

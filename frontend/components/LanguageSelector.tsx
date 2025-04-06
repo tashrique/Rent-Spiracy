@@ -1,14 +1,6 @@
 "use client";
 
-type Language =
-  | "english"
-  | "chinese"
-  | "hindi"
-  | "spanish"
-  | "korean"
-  | "bengali"
-  | "swahili"
-  | "arabic";
+import { Language } from "../services/api";
 
 interface LanguageOption {
   code: Language;
