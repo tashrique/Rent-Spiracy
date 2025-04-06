@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.utils.db import Database
-from app.routers import analysis, file_upload, documents, health, lawyers
+from app.routers import analysis, file_upload, documents, health, lawyers, suspect_leasers
 import uvicorn
 import os
 import logging
@@ -91,6 +91,7 @@ app.include_router(analysis.router)
 app.include_router(health.router)
 app.include_router(documents.router)
 app.include_router(lawyers.router)
+app.include_router(suspect_leasers.router)
 
 
 @app.on_event("startup")
@@ -99,9 +100,8 @@ async def startup_db_client():
     try:
         await Database.connect_db()
         logger.info("Connected to database")
-        
-        
-            
+        # Database seeding happens automatically during connect_db() 
+        # for development environment
     except Exception as e:
         logger.error(f"Failed to connect to database: {str(e)}")
         # Continue anyway, as we can still function with mock data
@@ -127,7 +127,8 @@ async def root():
             "/analysis/analyze-rental",
             "/health",
             "/documents",
-            "/lawyers"
+            "/lawyers",
+            "/suspect-leasers"
         ]
     }
 

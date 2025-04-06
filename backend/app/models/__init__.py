@@ -16,6 +16,12 @@ from app.models.lawyer import (
     Region
 )
 
+from app.models.suspect_leaser import (
+    SuspectLeaser,
+    SuspectLeaserCreate,
+    SuspectLeaserUpdate
+)
+
 __all__ = [
     "RentalAnalysisRequest",
     "AnalysisResult",
@@ -27,5 +33,8 @@ __all__ = [
     "LawyerCreate",
     "LawyerUpdate",
     "LawyerFilter",
-    "Region"
+    "Region",
+    "SuspectLeaser",
+    "SuspectLeaserCreate",
+    "SuspectLeaserUpdate"
 ]

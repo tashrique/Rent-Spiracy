@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { scamDetectionApi, ScamDetectionResponse } from "../services/api";
 import { translations } from "../services/constants";
+import TenantCheckPanel from "./TenantCheck/TenantCheckPanel";
 
 interface ScamDetectionFormProps {
   language: string;
@@ -233,6 +234,8 @@ export default function ScamDetectionForm({
         <h1 className="text-3xl font-bold mb-2 text-white">{t.title}</h1>
         <p className="text-gray-300">{t.subtitle}</p>
       </div>
+
+      <TenantCheckPanel language={language} />
 
       <form
         onSubmit={handleSubmit}

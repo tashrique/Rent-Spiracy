@@ -133,6 +133,17 @@ export interface Lawyer {
   updated_at?: string;
 }
 
+export interface SuspectLeaser {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  addresses: string[];
+  flags: string[];
+  reported_count: number;
+  created_at: string;
+}
+
 /**
  * API endpoints for scam detection
  */
@@ -384,9 +395,52 @@ export const lawyersApi = {
   }
 };
 
+/**
+ * API endpoints for suspect leasers
+ */
+export const suspectLeasersApi = {
+  // Get all suspect leasers with pagination
+  getSuspectLeasers: (skip: number = 0, limit: number = 10, language: Language = 'english'): Promise<SuspectLeaser[]> => {
+    return apiRequest<SuspectLeaser[]>(`/suspect-leasers?skip=${skip}&limit=${limit}&language=${language}`);
+  },
+  
+  // Search for suspect leasers by name, email, phone, or address
+  searchSuspectLeasers: (params: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    language?: Language;
+  }): Promise<SuspectLeaser[]> => {
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    if (params.name) queryParams.append('name', params.name);
+    if (params.email) queryParams.append('email', params.email);
+    if (params.phone) queryParams.append('phone', params.phone);
+    if (params.address) queryParams.append('address', params.address);
+    if (params.language) queryParams.append('language', params.language);
+    
+    return apiRequest<SuspectLeaser[]>(`/suspect-leasers/search?${queryParams.toString()}`);
+  },
+  
+  // Get a specific suspect leaser by ID
+  getSuspectLeaser: (id: string, language: Language = 'english'): Promise<SuspectLeaser> => {
+    return apiRequest<SuspectLeaser>(`/suspect-leasers/${id}?language=${language}`);
+  },
+  
+  // Report a suspect leaser
+  reportSuspectLeaser: (id: string): Promise<{success: boolean, reported_count: number, message: string}> => {
+    return apiRequest<{success: boolean, reported_count: number, message: string}>(
+      `/suspect-leasers/${id}/report`, 
+      'POST'
+    );
+  }
+};
+
 // Combine API services into a single export
 export const api = {
   baseUrl: getBaseUrl(),
   scamDetection: scamDetectionApi,
-  lawyers: lawyersApi
+  lawyers: lawyersApi,
+  suspectLeasers: suspectLeasersApi
 }; 
