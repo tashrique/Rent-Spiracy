@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { scamDetectionApi, ScamDetectionResponse } from "../services/api";
+import {
+  scamDetectionApi,
+  ScamDetectionResponse,
+  Language,
+} from "../services/api";
 import { translations } from "../services/constants";
+import TenantCheckPanel from "./TenantCheck/TenantCheckPanel";
 
 interface ScamDetectionFormProps {
   language: string;
@@ -46,6 +51,23 @@ export default function ScamDetectionForm({
   const t =
     (translations[language as keyof typeof translations] as TranslationType) ||
     (translations.english as TranslationType);
+
+  // Check if language is a valid Language type, default to English if not
+  const validateLanguage = (lang: string): Language => {
+    const validLanguages: Language[] = [
+      "english",
+      "spanish",
+      "chinese",
+      "hindi",
+      "korean",
+      "bengali",
+      "swahili",
+      "arabic",
+    ];
+    return validLanguages.includes(lang as Language)
+      ? (lang as Language)
+      : "english";
+  };
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -121,7 +143,7 @@ export default function ScamDetectionForm({
     setUploadProgress(0);
     setAnalysisStage(t.analysisStage1);
 
-    const apiLanguage = language as
+    const apiLanguage = validateLanguage(language) as
       | "english"
       | "spanish"
       | "chinese"
@@ -233,6 +255,8 @@ export default function ScamDetectionForm({
         <h1 className="text-3xl font-bold mb-2 text-white">{t.title}</h1>
         <p className="text-gray-300">{t.subtitle}</p>
       </div>
+
+      <TenantCheckPanel language={validateLanguage(language)} />
 
       <form
         onSubmit={handleSubmit}
