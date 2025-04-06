@@ -62,7 +62,7 @@ async function apiRequest<T>(
 }
 
 // Type definitions for API requests and responses
-export type Language = 'english' | 'spanish' | 'chinese' | 'hindi' | 'korean' | 'bengali';
+export type Language = 'english' | 'spanish' | 'chinese' | 'hindi' | 'korean' | 'bengali' | 'swahili' | 'arabic';
 
 export interface RentalAnalysisRequest {
   listing_url?: string;

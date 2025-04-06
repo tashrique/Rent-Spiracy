@@ -11,6 +11,8 @@ class Language(str, Enum):
     SPANISH = "spanish"
     KOREAN = "korean"
     BENGALI = "bengali"
+    SWAHILI = "swahili"
+    ARABIC = "arabic"
 
 
 class RentalAnalysisRequest(BaseModel):

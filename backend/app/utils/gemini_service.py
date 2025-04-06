@@ -634,9 +634,13 @@ class GeminiService:
             f"\n   - SPECIFIC California legal code references (e.g., Civil Code Section 1950.5 for security deposits, etc.)"
             f"\n   - Direct quotes from relevant California statutes when applicable"
             f"\n   - Specific recommendations for the tenant regarding this clause"
-            f"\n4. At least 6-8 specific questions the tenant should ask before signing, with explanations of why each question is important"
-            f"\n5. Actionable recommendations - specific actions the tenant should take based on your analysis"
-            f"\n6. A special section on California tenant rights that includes:"
+            f"\n4. Identification of standard/expected lease terms that are normal and fair to tenants:"
+            f"\n   - Normal clauses that are typical in residential leases"
+            f"\n   - Clauses that may initially seem concerning but are actually standard legal practice"
+            f"\n   - An explanation of why these terms are considered normal, fair, or legally required"
+            f"\n5. At least 6-8 specific questions the tenant should ask before signing, with explanations of why each question is important"
+            f"\n6. Actionable recommendations - specific actions the tenant should take based on your analysis"
+            f"\n7. A special section on California tenant rights that includes:"
             f"\n   - Relevant California Civil Code sections that apply to this lease"
             f"\n   - Local ordinances that might affect tenant rights (e.g., rent control in SF, LA, etc.)"
             f"\n   - Citations to specific case law where relevant"
@@ -755,6 +759,20 @@ IMPORTANT: Always cite the specific code section numbers and include the exact s
 \n      "is_concerning": true,
 \n      "reason": "Explanation of the issue with this clause... MUST BE IN {language.upper()}",
 \n      "california_law": "Specific California Civil Code references with section numbers and direct quotes from the statutes... MUST BE IN {language.upper()}"
+\n    }},
+\n    {{
+\n      "original_text": "Standard lease clause about rent payment...",
+\n      "simplified_text": "Plain language explanation in {language.upper()}...",
+\n      "is_concerning": false,
+\n      "reason": "Explanation of why this is a standard/normal lease term... MUST BE IN {language.upper()}",
+\n      "california_law": "Optional: Any relevant California Civil Code references that support this as standard... MUST BE IN {language.upper()}"
+\n    }},
+\n    {{
+\n      "original_text": "Another standard clause about quiet enjoyment...",
+\n      "simplified_text": "Plain language explanation in {language.upper()}...",
+\n      "is_concerning": false,
+\n      "reason": "Explanation of why this is a standard/normal lease term... MUST BE IN {language.upper()}",
+\n      "california_law": "Optional: Any relevant California Civil Code references... MUST BE IN {language.upper()}"
 \n    }}
 \n  ],
 \n  "suggested_questions": [
@@ -796,6 +814,10 @@ IMPORTANT: Always cite the specific code section numbers and include the exact s
 \nBe extremely thorough in your analysis. Identify ALL concerning clauses, not just the most obvious ones.
 \nIf you find potentially illegal or highly unfair terms, be sure to highlight them prominently.
 \nInclude at least 6-8 detailed, specific questions tailored to the exact issues in this lease document.
+\nMAKE SURE to clearly distinguish between genuinely concerning clauses and standard/normal lease terms that are fair and legal.
+\nFor standard lease terms, mark them as not concerning (is_concerning: false) and provide a brief explanation of why they are normal.
+\nBe lenient in your assessment - only mark clauses as concerning if they are truly problematic or unfair to tenants.
+\nStandard terms like basic rent payment requirements, reasonable maintenance obligations, and standard noise policies should not be flagged as concerning.
 \nIf you can't find any concerning clauses, explain thoroughly why the lease appears to be fair and standard.
 \nVERY IMPORTANT: Your response MUST be valid JSON that can be parsed programmatically - check that all quotes and braces match.
 \nDO NOT include explanatory text outside the JSON block.

@@ -8,7 +8,9 @@ type Language =
   | "hindi"
   | "spanish"
   | "korean"
-  | "bengali";
+  | "bengali"
+  | "swahili"
+  | "arabic";
 
 interface LanguageOption {
   code: Language;
@@ -46,6 +48,16 @@ const languages: LanguageOption[] = [
     code: "bengali",
     name: "বাংলা",
     flag: "🇧🇩",
+  },
+  {
+    code: "swahili",
+    name: "Kiswahili",
+    flag: "🇹🇿",
+  },
+  {
+    code: "arabic",
+    name: "العربية",
+    flag: "🇸🇦",
   },
 ];
 

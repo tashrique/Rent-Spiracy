@@ -331,7 +331,7 @@ export default function ScamDetectionResults({
       lowRiskAdvice:
         "यह किराया वैध प्रतीत होता है, लेकिन व्यक्तिगत जानकारी प्रदान करते समय या भुगतान करते समय हमेशा सावधानी बरतें।",
       mediumRiskAdvice:
-        "सावधानी से आगे बढ़ें। हम किसी भी भुगतान करने के लिए पहले व्यक्तिगत रूप से संपत्ति देखने और सब समझौतों को लिखित रूप में प्राप्त करने की सलाह देते हैं।",
+        "सावधानी से आगे बढ़ें। आमदनी प्रदान करने के लिए पहले व्यक्तिगत रूप से संपत्ति देखने और सब समझौतों को लिखित रूप में प्राप्त करने की सलाह देते हैं।",
       highRiskAdvice:
         "इस किराये में संभावित धोखाधड़ी के कई चेतावनी संकेत दिखाए गए हैं। हम दृढ़ता से आगे की पुष्टि होने तक किसी भी भुगतान या व्यक्तिगत जानकारी साझा करने से बचने की सलाह देते हैं।",
       explainerButton: "जानें कैसे स्कोर काम करते हैं",
@@ -345,7 +345,7 @@ export default function ScamDetectionResults({
       highConcernClause: "उच्च जोखिम",
       moderateConcernClause: "मध्यम जोखिम",
       detailedAnalysisDesc:
-        "इस विस्तृत विश्लेषण द्वारा आपके किराये के फाइलों की विश्वसनीयता और संभव जोखिमों का आकलन किया गया है।",
+        "इस विस्तृत विश्लेषण द्वारा आपके किराये के फाइलों की विश्वसनीयता एवं संभव जोखिमों का आकलन किया गया है।",
       grade: "ग्रेड",
       riskLevel: "जोखिम का स्तर",
       algorithmExplainerIntro:
@@ -353,11 +353,11 @@ export default function ScamDetectionResults({
       leaseAnalysisFactor: "किराये का विश्लेषण - समस्यापूर्ण क्लॉज पहचानना",
       priceComparisonFactor: "बाजार दरों के साथ कीमत तुलना",
       paymentTermsFactor:
-        "भुगतान के शर्तों का आकलन और सुरक्षा जमा की आवश्यकताओं का आकलन",
+        "भड़ान के शर्तों का आकलन और सुरक्षा जमा की आवश्यकताओं का आकलन",
       landlordCommunicationFactor: "राउंट कॉम्युनिकेशन पैटर्न का आकलन",
       propertyVerificationFactor: "संपत्ति की जानकारी सत्यापन",
       scoreRangeExplanation:
-        "अंक 80-100 को विश्वसनीय माना जाता है, 50-79 प্रयोजन प्रयोजन एवं 50 नीचे गुरुत्वपूर्ण चिह्न देखाते हैं।",
+        "अंक 80-100 को विश्वसनीय माना जाता है, 50-79 प्रयोजन प्रयोजन एवं 50 नीचे गुरुत्वपूर्ण चिह्न देखाते हैं।",
     },
     korean: {
       title: "사기 탐지 결과",
@@ -466,6 +466,115 @@ export default function ScamDetectionResults({
       propertyVerificationFactor: "প্রপার্টি তথ্য পরিশোধন",
       scoreRangeExplanation:
         "অংক 80-100 বিশ্বাসযোগ্য মনে করা হয়, 50-79 প্রয়োজন প্রয়োজন এবং 50 নীচে গুরুত্বপূর্ণ চিহ্ন দেখায়।",
+    },
+    swahili: {
+      title: "Matokeo ya Ugunduzi wa Ulaghai",
+      scamLikelihood: "Tathmini ya Hatari ya Ulaghai",
+      explanation: "Uchambuzi",
+      clausesSummary: "Ukaguzi wa Vipengele vya Kukodisha",
+      suggestedQuestions: "Maswali Yaliyopendekezwa",
+      backButton: "Angalia Kukodisha Nyingine",
+      low: "Hatari Ndogo",
+      medium: "Hatari ya Wastani",
+      high: "Hatari Kubwa",
+      concerningClause: "Inayosumbua",
+      normalClause: "Kawaida",
+      adviceTitle: "Nifanye Nini?",
+      adviceClose: "Ficha Ushauri",
+      adviceShow: "Onyesha Ushauri",
+      viewClauseDetail: "Tazama Maelezo",
+      hideClauseDetail: "Ficha Maelezo",
+      legalDisclaimer: "Kanusho ya Kisheria",
+      scoreTitle: "Alama ya Kuaminika",
+      saveQuestion: "Hifadhi",
+      unsaveQuestion: "Ondoa",
+      savedQuestionsTitle: "Maswali Yako Yaliyohifadhiwa",
+      noSavedQuestions: "Bado hakuna maswali yaliyohifadhiwa",
+      saveForLater: "Hifadhi kwa Baadaye",
+      lowRiskAdvice:
+        "Kukodisha huku kunaonekana halali, lakini daima uwe mwangalifu unapotoa maelezo ya kibinafsi au pesa.",
+      mediumRiskAdvice:
+        "Kuna viashiria vya matatizo kadhaa. Fikiria kuuliza maswali zaidi na kuwa mwangalifu sana.",
+      highRiskAdvice:
+        "Kuna viashiria vingi vya ulaghai. Tunashauri utafute chaguo nyingine za kukodisha.",
+      explainerButton: "Jinsi Tunavyopima",
+      explainerTitle: "Jinsi Tunavyopima Alama",
+      copied: "Imenakiliwa!",
+      copyToClipboard: "Nakili",
+      emailQuestions: "Tuma Barua pepe",
+      legalDisclaimerText:
+        "Chombo hiki si hati ya kisheria na haitoi ushauri wa kisheria. Inakusudiwa kwa madhumuni ya habari pekee.",
+      highConcernClause: "Wasiwasi wa Juu",
+      moderateConcernClause: "Wasiwasi wa Wastani",
+      detailedAnalysisDesc:
+        "Uchambuzi huu wa kina unatathmini uaminifu na hatari zinazoweza kutokea za hati yako ya kukodisha.",
+      grade: "Daraja",
+      riskLevel: "Kiwango cha Hatari",
+      algorithmExplainerIntro:
+        "Algoritimu yetu inachambua mambo mengi kutengeneza alama ya kuaminika:",
+      leaseAnalysisFactor:
+        "Uchambuzi wa kukodisha - kutambua vipengele vyenye matatizo",
+      priceComparisonFactor: "Ulinganishaji wa bei na viwango vya soko",
+      paymentTermsFactor:
+        "Tathmini ya masharti ya malipo na mahitaji ya amana ya usalama",
+      landlordCommunicationFactor:
+        "Tathmini ya mifumo ya mawasiliano ya mwenye nyumba",
+      propertyVerificationFactor: "Uthibitishaji wa taarifa za mali",
+      scoreRangeExplanation:
+        "Alama 80-100 zinaonekana kuaminika, 50-79 zinahitaji tahadhari, na chini ya 50 zinaonyesha dalili za hatari kubwa.",
+    },
+    arabic: {
+      title: "نتائج كشف الاحتيال",
+      scamLikelihood: "تقييم مخاطر الاحتيال",
+      explanation: "التحليل",
+      clausesSummary: "فحص بنود عقد الإيجار",
+      suggestedQuestions: "الأسئلة المقترحة",
+      backButton: "فحص إيجار آخر",
+      low: "مخاطر منخفضة",
+      medium: "مخاطر متوسطة",
+      high: "مخاطر عالية",
+      concerningClause: "مثير للقلق",
+      normalClause: "عادي",
+      adviceTitle: "ماذا يجب أن أفعل؟",
+      adviceClose: "إخفاء النصيحة",
+      adviceShow: "إظهار النصيحة",
+      viewClauseDetail: "عرض التفاصيل",
+      hideClauseDetail: "إخفاء التفاصيل",
+      legalDisclaimer: "إخلاء المسؤولية القانونية",
+      scoreTitle: "درجة الموثوقية",
+      saveQuestion: "حفظ",
+      unsaveQuestion: "إزالة",
+      savedQuestionsTitle: "الأسئلة المحفوظة",
+      noSavedQuestions: "لا توجد أسئلة محفوظة بعد",
+      saveForLater: "حفظ لاحقًا",
+      lowRiskAdvice:
+        "يبدو هذا الإيجار شرعيًا، ولكن كن حذرًا دائمًا عند تقديم معلومات شخصية أو أموال.",
+      mediumRiskAdvice:
+        "هناك بعض مؤشرات المشاكل. فكر في طرح المزيد من الأسئلة وكن حذرًا للغاية.",
+      highRiskAdvice:
+        "هناك العديد من مؤشرات الاحتيال. نوصي بالبحث عن خيارات إيجار أخرى.",
+      explainerButton: "كيف نقيّم",
+      explainerTitle: "كيف نحسب الدرجة",
+      copied: "تم النسخ!",
+      copyToClipboard: "نسخ",
+      emailQuestions: "إرسال بريد إلكتروني",
+      legalDisclaimerText:
+        "هذه الأداة ليست وثيقة قانونية ولا تقدم مشورة قانونية. وهي مخصصة لأغراض إعلامية فقط.",
+      highConcernClause: "قلق عالي",
+      moderateConcernClause: "قلق متوسط",
+      detailedAnalysisDesc:
+        "يقيّم هذا التحليل المفصل موثوقية والمخاطر المحتملة لوثيقة الإيجار الخاصة بك.",
+      grade: "الدرجة",
+      riskLevel: "مستوى الخطر",
+      algorithmExplainerIntro:
+        "تحلل خوارزميتنا عوامل متعددة لإنشاء درجة الموثوقية:",
+      leaseAnalysisFactor: "تحليل الإيجار - تحديد البنود الإشكالية",
+      priceComparisonFactor: "مقارنة الأسعار مع أسعار السوق",
+      paymentTermsFactor: "تقييم شروط الدفع ومتطلبات مبلغ التأمين",
+      landlordCommunicationFactor: "تقييم أنماط التواصل مع المالك",
+      propertyVerificationFactor: "التحقق من معلومات العقار",
+      scoreRangeExplanation:
+        "تعتبر الدرجات 80-100 موثوقة، وتتطلب الدرجات 50-79 الحذر، وتظهر الدرجات أقل من 50 علامات تحذير كبيرة.",
     },
   };
 
@@ -1079,7 +1188,7 @@ export default function ScamDetectionResults({
                 </div>
               ) : (
                 <p className="text-gray-500 text-sm italic">
-                  {t.noSavedQuestionsYet}
+                  {t.noSavedQuestions || "No saved questions yet"}
                 </p>
               )}
             </div>
