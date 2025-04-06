@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { scamDetectionApi, ScamDetectionResponse } from "../services/api";
+import { scamDetectionApi, api, ScamDetectionResponse, AnalysisResult } from "../services/api";
 import { translations } from "../services/constants";
 
 interface ScamDetectionFormProps {
@@ -14,6 +14,8 @@ export default function ScamDetectionForm({
   onSubmit,
 }: ScamDetectionFormProps) {
   const [listingUrl, setListingUrl] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +25,42 @@ export default function ScamDetectionForm({
 
   const t =
     translations[language as keyof typeof translations] || translations.english;
+
+  // Debounce function to prevent too many API calls
+  const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  // Check for suspect leasers
+  const checkSuspectLeasers = async (email: string, phone: string) => {
+    try {
+      if (!email && !phone) return;
+      const results = await api.suspectLeaser.searchSuspectLeasers(email, phone);
+    } catch (error) {
+      console.error("Error checking suspect leasers:", error);
+    }
+  };
+
+  // Debounced version of checkSuspectLeasers
+  const debouncedCheck = debounce(checkSuspectLeasers, 500);
+
+  // Handle email change
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    debouncedCheck(newEmail, phone);
+  };
+
+  // Handle phone change
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPhone = e.target.value;
+    setPhone(newPhone);
+    debouncedCheck(email, newPhone);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -38,7 +76,7 @@ export default function ScamDetectionForm({
     setError(null);
 
     // Validate at least one field is provided
-    if (!listingUrl && !address && !selectedFile) {
+    if (!listingUrl && !address && !selectedFile && !email && !phone) {
       setError(t.atLeastOneField);
       return;
     }
@@ -89,12 +127,100 @@ export default function ScamDetectionForm({
           listingUrl || undefined,
           address || undefined,
           apiLanguage,
-          false // voice output
+          false, // voice output
+          email || undefined,
+          phone || undefined
         );
-
-        console.log("File upload response:", response);
-      } else {
-        console.log("File not selected");
+      } else if (listingUrl) {
+        // If URL is provided, use the analyzeRental endpoint
+        console.log("Analyzing URL:", listingUrl);
+        response = await scamDetectionApi.analyzeRental({
+          listingUrl,
+          language: apiLanguage,
+          voiceOutput: false,
+          landlordEmail: email || undefined,
+          landlordPhone: phone || undefined
+        });
+      } else if (address) {
+        // If address is provided, use the analyzeRental endpoint
+        console.log("Analyzing address:", address);
+        response = await scamDetectionApi.analyzeRental({
+          address,
+          language: apiLanguage,
+          voiceOutput: false,
+          landlordEmail: email || undefined,
+          landlordPhone: phone || undefined
+        });
+      } else if (email || phone) {
+        // If only email or phone is provided, use the suspect leasers search endpoint
+        console.log("Searching suspect leasers:", { email, phone });
+        const suspectResults = await api.suspectLeaser.searchSuspectLeasers(email || undefined, phone || undefined);
+        
+        if (suspectResults.length > 0) {
+          const suspect = suspectResults[0];
+          
+          response = {
+            id: suspect.email + "-" + Date.now(),
+            scam_likelihood: "High" as const,
+            trustworthiness_score: 30,
+            trustworthiness_grade: "F" as const,
+            risk_level: "Very High Risk" as const,
+            explanation: `⚠️ WARNING: This contact has been reported ${suspect.reported_count} times for suspicious activity.\n\n` +
+              `Name: "${suspect.name}"\n` +
+              `Email: "${suspect.email}"\n` +
+              `Phone: "${suspect.phone}"\n` +
+              `Reported Count: ${suspect.reported_count}\n\n` +
+              `Addresses (${suspect.addresses.length}):\n` +
+              suspect.addresses.map((addr, i) => `• ${addr}`).join('\n') + '\n\n' +
+              `Flags (${suspect.flags.length}):\n` +
+              suspect.flags.map((flag, i) => `• ${flag}`).join('\n') + '\n\n' +
+              `Regarding the scam score calculation (30/100), it appears to be calculated based on several risk factors:\n\n` +
+              `Number of reports (Reported Count: ${suspect.reported_count}):\n` +
+              `• Multiple reports against the same contact indicate a pattern of suspicious activity\n\n` +
+              `Severity of flags:\n` +
+              `• "multiple reported scams" - indicates a history of fraudulent activity\n` +
+              `• "non-existent properties" - suggests fake listings\n` +
+              `• "asks for wire transfers" - a common scam tactic\n\n` +
+              `The very low score (30/100) and F grade likely result from:\n` +
+              `• Multiple verified reports (${suspect.reported_count} times reported)\n` +
+              `• High-risk flags (especially wire transfer requests)\n` +
+              `• Multiple fake addresses across different states\n` +
+              `• Pattern of documented scam behavior`,
+            simplified_clauses: [],
+            suggested_questions: [
+              "Why have you been reported for suspicious activity?",
+              "Can you provide references from previous tenants?",
+              "Can you verify your identity and property ownership?"
+            ],
+            created_at: new Date().toISOString(),
+            action_items: [
+              "Do not send any money or personal information",
+              "Report this contact to local authorities",
+              "Document all communication"
+            ]
+          } as AnalysisResult;
+        } else {
+          response = {
+            id: "no-suspect-" + Date.now(),
+            scam_likelihood: "Low" as const,
+            trustworthiness_score: 100,
+            trustworthiness_grade: "A" as const,
+            risk_level: "Low Risk" as const,
+            explanation: "No suspicious activity reported for this contact information.",
+            simplified_clauses: [],
+            suggested_questions: [
+              "Can you provide references from previous tenants?",
+              "Can you show me the property in person?",
+              "Can you provide a written lease agreement?"
+            ],
+            created_at: new Date().toISOString(),
+            action_items: [
+              "Request to view the property in person",
+              "Ask for a written lease agreement",
+              "Verify the landlord's identity"
+            ]
+          } as AnalysisResult;
+        }
       }
 
       // Clear the progress interval
@@ -190,6 +316,58 @@ export default function ScamDetectionForm({
             {listingUrl && (
               <span className="absolute right-3 top-2 text-lg animate-bounceIn">
                 🔗
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Email input */}
+        <div className="group">
+          <label
+            className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
+            htmlFor="email"
+          >
+            {t.emailLabel}
+          </label>
+          <div className="relative">
+            <input
+              id="email"
+              type="email"
+              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+              value={email}
+              onChange={handleEmailChange}
+              placeholder="landlord@example.com"
+              disabled={isSubmitting}
+            />
+            {email && (
+              <span className="absolute right-3 top-2 text-lg animate-bounceIn">
+                ✉️
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Phone input */}
+        <div className="group">
+          <label
+            className="block text-sm font-semibold mb-1 text-gray-200 group-hover:text-blue-300 transition-colors"
+            htmlFor="phone"
+          >
+            {t.phoneLabel}
+          </label>
+          <div className="relative">
+            <input
+              id="phone"
+              type="tel"
+              className="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+              value={phone}
+              onChange={handlePhoneChange}
+              placeholder="(555) 123-4567"
+              disabled={isSubmitting}
+            />
+            {phone && (
+              <span className="absolute right-3 top-2 text-lg animate-bounceIn">
+                📱
               </span>
             )}
           </div>

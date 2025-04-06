@@ -658,10 +658,9 @@ export default function ScamDetectionResults({
 
           <div className="mt-4">
             <h3 className="font-medium mb-2 text-gray-200">{t.explanation}</h3>
-            <div className="text-gray-300 bg-gray-900/30 p-4 rounded-lg border border-gray-700 leading-relaxed">
-              {/* Use displayExplanation which may use raw JSON data */}
+            <pre className="text-gray-300 bg-gray-900/30 p-4 rounded-lg border border-gray-700 leading-relaxed whitespace-pre-wrap font-sans">
               {displayExplanation}
-            </div>
+            </pre>
 
             <div className="mt-6">
               <button

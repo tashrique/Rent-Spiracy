@@ -53,6 +53,8 @@ export interface RentalAnalysisRequest {
   document_content?: string;
   language?: Language;
   voice_output?: boolean;
+  landlord_email?: string;
+  landlord_phone?: string;
   [key: string]: unknown; // Index signature for Record<string, unknown> compatibility
 }
 
@@ -102,21 +104,25 @@ export const scamDetectionApi = {
     fileContent?: string;
     language?: string;
     voiceOutput?: boolean;
+    landlordEmail?: string;
+    landlordPhone?: string;
   }): Promise<AnalysisResult> => {
     const requestData: RentalAnalysisRequest = {
       listing_url: data.listingUrl,
       property_address: data.address,
       document_content: data.fileContent,
       language: data.language as Language || 'english',
-      voice_output: data.voiceOutput || false
+      voice_output: data.voiceOutput || false,
+      landlord_email: data.landlordEmail,
+      landlord_phone: data.landlordPhone
     };
     
-    return apiRequest<AnalysisResult>('/analysis/analyze-rental', 'POST', requestData);
+    return apiRequest<AnalysisResult>('/api/analysis/analyze-rental', 'POST', requestData);
   },
   
   // Get a previous analysis by ID
   getAnalysis: (id: string): Promise<AnalysisResult> => {
-    return apiRequest<AnalysisResult>(`/analysis/${id}`);
+    return apiRequest<AnalysisResult>(`/api/analysis/${id}`);
   },
   
   // File upload endpoint - this uses FormData instead of JSON
@@ -125,14 +131,18 @@ export const scamDetectionApi = {
     listingUrl?: string, 
     propertyAddress?: string,
     language: string = 'english',
-    voiceOutput: boolean = false
+    voiceOutput: boolean = false,
+    landlordEmail?: string,
+    landlordPhone?: string
   ): Promise<AnalysisResult> => {
-    const url = `${getBaseUrl()}/upload/document`;
+    const url = `${getBaseUrl()}/api/upload/document`;
     const formData = new FormData();
     
     formData.append('file', file);
     if (listingUrl) formData.append('listing_url', listingUrl);
     if (propertyAddress) formData.append('property_address', propertyAddress);
+    if (landlordEmail) formData.append('landlord_email', landlordEmail);
+    if (landlordPhone) formData.append('landlord_phone', landlordPhone);
     formData.append('language', language);
     formData.append('voice_output', String(voiceOutput));
     
@@ -186,7 +196,34 @@ export const scamDetectionApi = {
   },
 };
 
+export interface SuspectLeaser {
+  name: string;
+  email: string;
+  phone: string;
+  reported_count: number;
+  addresses: string[];
+  flags: string[];
+  created_at: string;
+}
+
+/**
+ * API endpoints for suspect leasers
+ */
+export const suspectLeaserApi = {
+  // Search for suspect leasers by email or phone
+  searchSuspectLeasers: async (email?: string, phone?: string): Promise<SuspectLeaser[]> => {
+    let query = '/api/suspect_leasers/search?';
+    if (email) query += `email=${encodeURIComponent(email)}`;
+    if (phone) {
+      if (email) query += '&';
+      query += `phone=${encodeURIComponent(phone)}`;
+    }
+    return apiRequest<SuspectLeaser[]>(query);
+  },
+};
+
 export const api = {
   baseUrl: getBaseUrl(),
   scamDetection: scamDetectionApi,
+  suspectLeaser: suspectLeaserApi,
 }; 
