@@ -7,6 +7,7 @@ import uvicorn
 import os
 import logging
 from dotenv import load_dotenv
+from typing import List
 
 # Configure logging
 logging.basicConfig(
@@ -28,29 +29,50 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configuration (completely open for debugging)
+# Get allowed origins from environment variable
+def get_allowed_origins() -> List[str]:
+    origins_env = os.getenv("CORS_ORIGINS", "")
+    
+    # If not set or empty, default to allow all in development but be strict in production
+    if not origins_env:
+        if os.getenv("ENVIRONMENT", "development") == "production":
+            # Production default to vercel deployment and localhost for testing
+            return [
+                "https://rent-spiracy.vercel.app",
+                "https://rentspiracy.tech",
+                "https://www.rentspiracy.tech"
+            ]
+        else:
+            # Development - allow localhost with different ports and wildcard for testing
+            return ["http://localhost:3000", "http://127.0.0.1:3000", "*"]
+    
+    # Parse comma-separated origins
+    return [origin.strip() for origin in origins_env.split(",") if origin.strip()]
+
+# CORS configuration for production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins 
-    allow_credentials=False,
+    allow_origins=get_allowed_origins(),
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
     max_age=86400,  # Cache preflight requests for 24 hours
 )
 
-# Add a custom middleware to log requests and ensure CORS headers
+# Add a custom middleware to log requests and add security headers 
 @app.middleware("http")
-async def log_and_add_cors_headers(request: Request, call_next):
+async def log_and_add_security_headers(request: Request, call_next):
     logger.info(f"Request: {request.method} {request.url}")
     
     # Process the request
     response = await call_next(request)
     
-    # Ensure CORS headers are present on every response
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
+    # Add security headers for production
+    if os.getenv("ENVIRONMENT", "development") == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
     
     return response
 

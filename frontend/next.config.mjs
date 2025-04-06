@@ -4,9 +4,11 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NODE_ENV === 'production'
-          ? 'https://rent-spiracy.onrender.com/api/:path*'
-          : 'http://127.0.0.1:8000/api/:path*',
+        destination: process.env.NEXT_PUBLIC_API_URL 
+          ? `${process.env.NEXT_PUBLIC_API_URL}/:path*`
+          : process.env.NODE_ENV === 'production'
+            ? 'https://rent-spiracy.onrender.com/:path*'
+            : 'http://127.0.0.1:8000/:path*',
       },
     ]
   },
@@ -35,6 +37,16 @@ const nextConfig = {
         ],
       },
     ]
+  },
+  // Optimize for production
+  output: 'standalone',
+  poweredByHeader: false,
+  reactStrictMode: true,
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
   },
 };
 

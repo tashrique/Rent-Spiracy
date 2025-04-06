@@ -7,12 +7,20 @@ services:
     envVars:
       - key: PORT
         value: 8000
+      - key: ENVIRONMENT
+        value: production
       - key: CORS_ORIGINS
-        value: https://rent-spiracy.vercel.app,https://rentspiracy.tech,https://www.rentspiracy.tech,http://localhost:3000
+        value: https://rent-spiracy.vercel.app,https://rentspiracy.tech,https://www.rentspiracy.tech
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATABASE_NAME
+        value: rent_spiracy
+      - key: MONGO_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
     healthCheckPath: /health
-    repo: https://github.com/tashrique/Rent-Spiracy
-    branch: main
-    rootDir: backend
+    autoDeploy: true
     buildFilter:
       paths:
         - backend/**

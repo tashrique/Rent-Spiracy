@@ -7,8 +7,21 @@ const getBaseUrl = (): string => {
   // Access environment variable for API URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   
-  // If environment variable is not set, fallback to localhost
-  return apiUrl || 'http://127.0.0.1:8000';
+  // If environment variable is not set, use environment-appropriate default
+  if (!apiUrl) {
+    // Check if we're in production (browser-safe check)
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    if (isProduction) {
+      console.warn('NEXT_PUBLIC_API_URL not set in production environment');
+      return 'https://rent-spiracy.onrender.com';
+    } else {
+      // Default to localhost in development
+      return 'http://127.0.0.1:8000';
+    }
+  }
+  
+  return apiUrl;
 };
 
 /**
